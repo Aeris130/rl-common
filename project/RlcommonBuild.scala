@@ -11,7 +11,7 @@ object RlcommonBuild extends Build {
 
     libraryDependencies ++= Seq(
 
-      // Tests
+      // Tests.
 
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "test",
       "org.scalatest" % "scalatest_2.11" % "2.2.0" % "test"
