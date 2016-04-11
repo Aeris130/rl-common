@@ -1,5 +1,6 @@
 package net.cyndeline.rlcommon.util
 
+import net.cyndeline.rlcommon.math.geom.Point
 import net.cyndeline.rlcommon.util.Direction._
 
 /**
@@ -15,7 +16,7 @@ object Geom {
   def width(start: Point, stop: Point): Int = {
     width(start.x, stop.x)
   }
-  def width(r: RectangleCoordinates): Int = width(r.start, r.stop)
+  def width(r: Rectangle): Int = width(r.start, r.stop)
   def height(start: Point, stop: Point): Int = {
     height(start.y, stop.y)
   }
@@ -23,11 +24,11 @@ object Geom {
     validate(start, stop)
     stop - start + 1
   }
-  def height(r: RectangleCoordinates): Int = height(r.start, r.stop)
+  def height(r: Rectangle): Int = height(r.start, r.stop)
 
   def area(startX: Int, stopX: Int, startY: Int, stopY: Int): Int = width(startX, stopX) * height(startY, stopY)
   def area(start: Point, stop: Point): Int = area(start.x, stop.x, start.y, stop.y)
-  def area(r: RectangleCoordinates): Int = area(r.start.x, r.stop.x, r.start.y, r.stop.y)
+  def area(r: Rectangle): Int = area(r.start.x, r.stop.x, r.start.y, r.stop.y)
 
   def areaCoordinates(startX: Int, startY: Int, width: Int, height: Int): (Point, Point) = {
     (Point(startX, startY), Point(startX + width - 1, startY + height - 1))
@@ -42,7 +43,7 @@ object Geom {
     case South => stop.y
     case East => stop.x
   }
-  def furthestCoordinate(direction: Direction, r: RectangleCoordinates): Int = furthestCoordinate(direction, r.start, r.stop)
+  def furthestCoordinate(direction: Direction, r: Rectangle): Int = furthestCoordinate(direction, r.start, r.stop)
 
   private def validate(start: Int, stop: Int) {
     require(start <= stop, "start (" + start + ") must be <= stop (" + stop + ")")

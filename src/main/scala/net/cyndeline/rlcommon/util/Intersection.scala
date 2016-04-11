@@ -1,6 +1,6 @@
 package net.cyndeline.rlcommon.util
 
-import net.cyndeline.rlcommon.util.RectangleCoordinates
+import net.cyndeline.rlcommon.math.geom.Point
 
 /**
  * Computes the intersection of two rectangle points. If no intersection exists, an exception is thrown when
@@ -11,7 +11,7 @@ import net.cyndeline.rlcommon.util.RectangleCoordinates
  * @param r2Start Starting point for the second rectangle.
  * @param r2Stop Ending point for the second rectangle (inclusive).
  */
-class Intersection private (r1Start: Point, r1Stop: Point, r2Start: Point, r2Stop: Point) extends RectangleCoordinates {
+class Intersection private (r1Start: Point, r1Stop: Point, r2Start: Point, r2Stop: Point) extends Rectangle {
   require(r1Start.x <= r1Stop.x && r2Start.x <= r2Stop.x, "Starting x of a rectangle must be <= to stop.")
   require(r1Start.y <= r1Stop.y && r2Start.y <= r2Stop.y, "Starting y of a rectangle must be <= to stop.")
 
@@ -93,14 +93,16 @@ object Intersection {
 
   /**
    * Computes the intersection between two rectangular coordinate objects.
+ *
    * @param r1 A rectangle.
    * @param r2 A rectangle.
    * @return The intersection between the rectangles start and stop coordinates.
    */
-  def apply(r1: RectangleCoordinates, r2: RectangleCoordinates) = new Intersection(r1.start, r1.stop, r2.start, r2.stop)
+  def apply(r1: Rectangle, r2: Rectangle) = new Intersection(r1.start, r1.stop, r2.start, r2.stop)
 
   /**
    * Computes an intersection between the start and stop coordinates of a rectangle.
+ *
    * @param r1Start Starting point for the first rectangle.
    * @param r1Stop Ending point for the first rectangle (inclusive).
    * @param r2Start Starting point for the second rectangle.
