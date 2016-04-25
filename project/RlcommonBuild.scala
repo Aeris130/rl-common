@@ -4,7 +4,7 @@ import Keys._
 object RlcommonBuild extends Build {
   lazy val exampleProject = Project("RLCommon", file(".")) settings(
     version       := "1.0",
-    scalaVersion  := "2.11.7",
+    scalaVersion  := "2.11.8",
     scalacOptions := Seq("-deprecation"),
     name          := "rlcommon",
     organization  := "net.cyndeline",

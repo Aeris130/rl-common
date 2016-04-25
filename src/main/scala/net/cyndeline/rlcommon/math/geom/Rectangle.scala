@@ -37,4 +37,5 @@ class Rectangle (val start: Point, val width: Int, val height: Int) {
 
 object Rectangle {
   def apply(start: Point, width: Int, height: Int): Rectangle = new Rectangle(start, width, height)
+  def apply(start: Point, dim: Dimensions): Rectangle = new Rectangle(start, dim.width, dim.height)
 }
