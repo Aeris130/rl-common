@@ -11,6 +11,7 @@ import net.cyndeline.rlcommon.math.geom.Point
  * @param r2Start Starting point for the second rectangle.
  * @param r2Stop Ending point for the second rectangle (inclusive).
  */
+//TODO rename to RectangleIntersection
 class Intersection private (r1Start: Point, r1Stop: Point, r2Start: Point, r2Stop: Point) extends Rectangle {
   require(r1Start.x <= r1Stop.x && r2Start.x <= r2Stop.x, "Starting x of a rectangle must be <= to stop.")
   require(r1Start.y <= r1Stop.y && r2Start.y <= r2Stop.y, "Starting y of a rectangle must be <= to stop.")

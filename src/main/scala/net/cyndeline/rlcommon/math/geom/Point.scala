@@ -50,5 +50,6 @@ class Point(val x: Int, val y: Int) extends PointInterface[Point, Int, Point, DP
 
 object Point {
   def apply(x: Int, y: Int): Point = new Point(x, y)
+  def apply(xy: (Int, Int)): Point = new Point(xy._1, xy._2)
   def apply(point: DPoint): Point = new Point(point.x.toInt, point.y.toInt)
 }
