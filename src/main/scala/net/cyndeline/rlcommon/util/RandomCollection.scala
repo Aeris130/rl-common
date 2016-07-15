@@ -20,28 +20,28 @@ trait RandomCollection[E] {
    * @param weight Weight to assign to the item. Must be higher than 0.
    * @param element Item to map height to.
    */
-  def add(weight: Double, element: E)
+  def add(weight: Int, element: E): RandomCollection[E]
 
   /**
    * Adds elements and weights of another collection to this one.
    * @param collection Collection to add.
    */
-  def addCollection(collection: RandomCollection[E])
+  def addCollection(collection: RandomCollection[E]): RandomCollection[E]
 
   /**
    * Removes an element from the collection.
    * @param element Element to remove.
    */
-  def remove(element: E)
+  def remove(element: E): RandomCollection[E]
 
   /**
    * Fetches an item from the collection at random. Items with higher
    * weight will be more likely to be returned.
    *
-   * @return A random item with weighted probability that skews towards
-   * 			greater weights.
+   * @param r Random object used in selection.
+   * @return A random item with weighted probability that skews towards greater weights.
    */
-  def next: E
+  def next(r: Random): E
 
   /**
    * @return the size of the collection.
@@ -55,8 +55,7 @@ trait RandomCollection[E] {
 
   /**
    * Returns each element stored without weights.
-   * @return A list containing one copy of each element in no
-   * 			particular order.
+   * @return A list containing one copy of each element in no particular order.
    */
   def allElements: Vector[E]
 
@@ -64,18 +63,6 @@ trait RandomCollection[E] {
    * Iteratoes over every weight and element in the collection.
    * @return An iterator over the collection.
    */
-  def iterator: Iterator[(Double, E)]
+  def iterator: Iterator[(Int, E)]
 
-  /**
-   * Creates a copy of this collection using the same Random object responsible for selecting elements.
-   * @return A new collection with the same weights and elements.
-   */
-  def copy: RandomCollection[E]
-
-  /**
-   * Builds a collection using a new random object and the same values as the old collection.
-   * @param random Random object used when selecting elements.
-   * @return A RandomCollection with a new Random object and the same elements and weights as the old collection.
-   */
-  def newCollection(random: Random): RandomCollection[E]
 }

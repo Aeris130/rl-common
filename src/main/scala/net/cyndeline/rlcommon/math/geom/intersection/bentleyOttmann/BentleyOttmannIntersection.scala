@@ -9,8 +9,8 @@ import scala.collection.mutable
 
 /**
   * Computes all intersections for a set of line segments in O((n + k) * log(n)) time, where k is the number of
-  * intersections. Handles degenerate cases using the implemetation described in "A Generic Plane-Sweep for Intersecting
-  * Line Segments" by W.Freiseisen, P.Pau and R.Linz.
+  * intersections. Handles degenerate cases using the implementation described in "A Generic Plane-Sweep for Intersecting
+  * Line Segments" by W.Freiseisen, P.Pau.
   */
 /*
     Step 8 of Target Vertex Subalgorithm requires some further development.
@@ -26,7 +26,7 @@ import scala.collection.mutable
 
     // Scripts productions
     - Takes a line in the current set and adds a duplicate
-
+//TODO delete comments
  */
 class BentleyOttmannIntersection() {
 
