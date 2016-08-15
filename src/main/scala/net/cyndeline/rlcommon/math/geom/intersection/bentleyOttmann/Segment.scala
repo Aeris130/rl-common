@@ -5,20 +5,15 @@ import net.cyndeline.rlcommon.math.geom.{DPoint, Line, Point}
 /**
   * A line segment between two points.
   */
-class Segment[L <: Line](val id: Int, val original: L) extends Line(original.start, original.stop) {
+class Segment[L <: Line](val id: Int, val original: L) extends Line(Segment.computeSource(original), Segment.computeTarget(original, Segment.computeSource(original))) {
 
   def isVertical: Boolean = target.x == source.x
   def slopeLessThan(other: Segment[L]): Boolean = compareSlope(other) == -1
   def slopeGreaterThan(other: Segment[L]): Boolean = compareSlope(other) == 1
   def toLine: Line = this.asInstanceOf[Line]
 
-  val source = if (original.start.x < original.stop.x ||
-                    (original.start.x == original.stop.x && original.start.y < original.stop.y))
-                original.start
-              else
-                original.stop
-
-  val target = if (original.start != source) original.start else original.stop
+  val source = start
+  val target = stop
 
   /**
     * Defines if this segment lies below another segment at a given point X. This is true if the y-value of this segment
@@ -30,25 +25,41 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(original.sta
     * @return True if this segment is below the other segment at x, otherwise false.
     */
   def below(x: Double, other: Segment[L]): Boolean = {
-    require(x >= this.source.x && x <= this.target.x, "Attempted to compare below-status for segment " + this + " using x-value " + x)
-    require(x >= other.source.x && x <= other.target.x, "Attempted to compare below-status for segment " + other + " using x-value " + x)
-
-    /* We need to find the y-value on both segments where x is equal to the input, easiest done using the
-     * point-slope formula: Given two points p1 and p2 and a slope m, y - y1 == m(x - x1)
-     */
-    def yGivenX(seg: Segment[L]): Double = (seg.slope * (x - seg.source.x)) + seg.source.y // y == m(x - x1) + y1
+    require(x >= this.source.x && x <= this.target.x, s"Attempted to compare below-status for segment $this using x-value $x")
+    require(x >= other.source.x && x <= other.target.x, s"Attempted to compare below-status for segment $other using x-value $x")
 
     /* If one or more segment is vertical, below status should be manually specified to avoid slopes. */
-    if ((this.isVertical && other.isVertical) || (!this.isVertical && other.isVertical))
-      return false
-    else if (this.isVertical && !other.isVertical)
-      return true
+    if (this.isVertical && other.isVertical)
+      return belowTieBreaker(other)
 
-    val thisY = yGivenX(this)
-    val otherY = yGivenX(other)
+    else if (!this.isVertical && other.isVertical)
+      return this.y(x) < other.start.y
+
+    else if (this.isVertical && !other.isVertical) {
+      return !(other.y(x) < this.start.y)
+    }
+
+    val thisY = this.y(x)
+    val otherY = other.y(x)
 
     thisY < otherY || (thisY == otherY && {
-      this.slope > other.slope && (DPoint(x, thisY) == source.toDouble || DPoint(x, otherY) == other.source.toDouble)
+      val pIsThisSource = DPoint(x, thisY) == source.toDouble
+      val pIsOtherSource = DPoint(x, otherY) == other.source.toDouble
+
+      if (this.slope > other.slope && (pIsThisSource || pIsOtherSource)) {
+        true
+      } else if (this.slope < other.slope && (pIsThisSource || pIsOtherSource)) {
+        false
+      } else {
+
+        /* We need a special case here to handle what happens if neither segments slope if greater than the others,
+        * or if (x,y) isn't the source for either segment (i.e we're at an intersection or a collinear segment).
+        * This is needed since tree structures otherwise may search the wrong sub-tree if a.below(b) is called on
+        * insertion, but b.below(a) is called on deletion or lookup.
+        */
+        belowTieBreaker(other)
+
+      }
     })
   }
 
@@ -70,6 +81,36 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(original.sta
       1
   }
 
+  /**
+    * This check is not a part of the original algorithm description, but is an implementation-specific measure
+    * to ensure consistency in data structure behaviour.
+    */
+  private def belowTieBreaker(other: Segment[L]): Boolean = {
+
+    /* We start by comparing slopes, causing collinear overlapping segments to group up on the sweep line. */
+    if (this.slopeGreaterThan(other))
+      true
+    else if (other.slopeGreaterThan(this))
+      false
+    else {
+
+      // collinear and intersecting/overlapping (otherwise this.y != other.y, causing this tiebreaker to not be called)
+      if (EventPoint.coordinateLessThan(this.start, other.start))
+        true
+      else if (EventPoint.coordinateLessThan(other.start, this.start))
+        false
+      else if (EventPoint.coordinateLessThan(this.stop, other.stop))
+        false
+      else if (EventPoint.coordinateLessThan(other.stop, this.stop))
+        true
+      else
+        this.id < other.id
+
+    }
+  }
+
+  override def toString: String = s"Seg[$id]<${start.asTuple}, ${stop.asTuple} # original: $original>"
+
   override def equals(other: Any): Boolean = other match {
     case s: Segment[L] => id == s.id && original == s.original
     case _ => false
@@ -81,6 +122,14 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(original.sta
 
 object Segment {
   def apply[L <: Line](id: Int, original: L): Segment[L] = new Segment[L](id, original)
-  def apply(source: (Int, Int), target: (Int, Int), id: Int): Segment[Line] = new Segment(id, Line(source, target))
-  def apply(source: Point, target: Point, id: Int): Segment[Line] = new Segment(id, Line(source, target))
+  def apply(id: Int, source: (Int, Int), target: (Int, Int)): Segment[Line] = new Segment(id, Line(source, target))
+  def apply(id: Int, source: Point, target: Point): Segment[Line] = new Segment(id, Line(source, target))
+
+  def computeSource(l: Line): Point = if (l.start.x < l.stop.x ||
+    (l.start.x == l.stop.x && l.start.y < l.stop.y))
+    l.start
+  else
+    l.stop
+
+  def computeTarget(l: Line, source: Point): Point = if (l.start != source) l.start else l.stop
 }

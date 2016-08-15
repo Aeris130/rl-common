@@ -32,13 +32,63 @@ class LineSpec extends SpecImports {
 
       Given("two collinear lines")
       val line1 = line((1, 1), (4, 4))
+      val line2 = line((5, 5), (8, 8))
+
+      When("checking if the lines are collinear")
+      val collinear1 = line1.collinearWith(line2)
+      val collinear2 = line2.collinearWith(line1)
+
+      Then("the result should be true")
+      collinear1 should be (true)
+      collinear2 should be (true)
+
+    }
+
+    it ("should not report lines as collinear if they have the same angle but doesn't lie on the same line") {
+
+      Given("two collinear lines")
+      val line1 = line((1, 1), (4, 4))
       val line2 = line((2, 1), (5, 4))
 
       When("checking if the lines are collinear")
-      val collinear = line1.collinearWith(line2)
+      val collinear1 = line1.collinearWith(line2)
+      val collinear2 = line2.collinearWith(line1)
+
+      Then("the result should be false")
+      collinear1 should be (false)
+      collinear2 should be (false)
+
+    }
+
+    it ("should report single-point lines as collinear with other single-point lines") {
+
+      Given("two lines with coordinate (2,2)")
+      val line1 = line((2, 2), (2, 2))
+      val line2 = line((2, 2), (2, 2))
+
+      When("checking if the lines are collinear")
+      val collinear1 = line1.collinearWith(line2)
+      val collinear2 = line2.collinearWith(line1)
 
       Then("the result should be true")
-      collinear should be (true)
+      collinear1 should be (true)
+      collinear2 should be (true)
+
+    }
+
+    it ("should report single-point lines as collinear with multi-point lines") {
+
+      Given("a single-point line intersecting with another line")
+      val line1 = line((2, 2), (2, 2))
+      val line2 = line((1, 1), (3, 3))
+
+      When("checking if the lines are collinear")
+      val collinear1 = line1.collinearWith(line2)
+      val collinear2 = line2.collinearWith(line1)
+
+      Then("the result should be true")
+      collinear1 should be (true)
+      collinear2 should be (true)
 
     }
 
@@ -253,6 +303,56 @@ class LineSpec extends SpecImports {
 
     }
 
+    it ("should detect an intersection between two segments when one of them occupies a single coordinate") {
+
+      Given("a single-point segment and one that encompasses multiple coordinates")
+      val s1 = line((2, 2), (2, 2))
+      val s2 = line((0, 4), (4, 0))
+
+      When("checking if the segments intersect")
+      val s1IntersectsS2 = s1.intersection(s2)
+      val s2IntersectsS1 = s2.intersection(s1)
+
+      Then("the point (2,2) should be detected as an intersection")
+      s1IntersectsS2.get.overlap should be ((Point(2, 2), Point(2, 2)))
+      s2IntersectsS1 should equal (s1IntersectsS2)
+
+    }
+
+    it ("should not detect an intersection between two segments when one of them occupies a single coordinate and they don't overlap") {
+
+      Given("a single-point segment and one that encompasses multiple coordinates")
+      val s1 = line((2, 2), (2, 2))
+      val s2 = line((0, 3), (3, 0))
+
+      When("checking if the segments intersect")
+      val s1IntersectsS2 = s1.intersection(s2)
+      val s2IntersectsS1 = s2.intersection(s1)
+
+      Then("no overlap should be found")
+      s1IntersectsS2 should be ('empty)
+      s2IntersectsS1 should be ('empty)
+
+    }
+
+    it ("should detect a single-point intersection between collinear segments that share end-points") {
+
+      Given("two collinear segments sharing (4,4)")
+      val l1 = line((2, 2), (4, 4))
+      val l2 = line((4, 4), (6, 6))
+
+      When("checking if the segments intersect")
+      val s1IntersectsS2 = l1.intersection(l2)
+      val s2IntersectsS1 = l2.intersection(l1)
+
+      Then("a single-coordinate point at (4,4) between l1 and l2 should be found")
+      val intersection = s1IntersectsS2.get
+      intersection.isSinglePoint should be (true)
+      intersection.pointIntersection should be (DPoint(4, 4))
+      s2IntersectsS1.get should equal (s1IntersectsS2.get)
+
+    }
+
     /*
      *
      *  Point intersection
@@ -318,6 +418,20 @@ class LineSpec extends SpecImports {
 
     }
 
+    it ("should not consider a point that lies outside a single-coordinate line as intersecting") {
+
+      Given("a single-point line and a point")
+      val l = line((2, 2), (2, 2))
+      val point = DPoint(0, 3)
+
+      When("checking if the line contains the point")
+      val contains = l.containsPoint(point)
+
+      Then("the result should be false")
+      contains should be (false)
+
+    }
+
     /*
      * Splits
      */
@@ -362,6 +476,24 @@ class LineSpec extends SpecImports {
       split should be (Seq(start.toDouble, stop.toDouble))
 
     }
+
+    it ("should split a single-point segment") {
+
+      Given("a single-point line")
+      val p = Point(2, 2)
+      val line = Line(p, p)
+
+      When("splitting the line 4 times")
+      val split = line.split(4)
+
+      Then("only the lines start and stop coordinate should be returned")
+      split should be (Vector(p.toDouble))
+
+    }
+
+    /*
+     * Slopes
+     */
 
     it ("should compute slopes") {
 

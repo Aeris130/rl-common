@@ -12,6 +12,7 @@ object Centroid {
 
   private def centroidFromPoints(ps: Seq[DPoint], round: Boolean): DPoint = {
     require(ps.nonEmpty, "Cannot compute centroid from an empty set of points")
+    require(ps.size > 1, "Cannot compute centroid from a single point.")
     val k = ps.size
     val sumX = ps.map(_.x).sum
     val sumY = ps.map(_.y).sum

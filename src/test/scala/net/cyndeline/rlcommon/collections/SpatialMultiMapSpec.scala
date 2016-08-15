@@ -115,7 +115,35 @@ class SpatialMultiMapSpec extends SpecImports {
       val withinRange = map.getRange(range)
 
       Then("values mapped to m1 through m4 should be in the result")
-      withinRange should be (Some(Set(1, 11, 3, 5)))
+      withinRange should be (Set(1, 11, 3, 5))
+
+    }
+
+    it ("should return an empty set for a range query on an empty map") {
+
+      Given("an empty map")
+      val map = SpatialMultiMap.withPoint2D[Int]()
+
+      When("querying a rectangular area")
+      val result = map.getRange(Rectangle(Point(0, 0), 3, 4))
+
+      Then("the result should be an empty set")
+      result should be (Set())
+
+    }
+
+    it ("should not include results in a ranged search after deleting them") {
+
+      Given("a map with a point")
+      val p = Point(1, 2)
+      val map = SpatialMultiMap.withPoint2D[Int]() + (p, 1)
+
+      When("deleting the point and performing a ranged search including it")
+      val deleted = map - (p, 1)
+      val search = deleted.getRange(Rectangle(Point(0, 0), 3, 4))
+
+      Then("the result should be empty")
+      search should be ('empty)
 
     }
 

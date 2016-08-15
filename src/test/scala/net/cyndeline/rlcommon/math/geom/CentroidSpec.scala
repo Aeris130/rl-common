@@ -22,6 +22,34 @@ class CentroidSpec extends SpecImports {
 
     }
 
+    it ("should compute the centroid of a set of identical points") {
+
+      Given("5 identical points")
+      val p1 = Point(3, 2)
+      //...
+
+      When("computing their centroids")
+      val centroid = Centroid.fromPoints(p1, p1, p1, p1, p1)
+
+      Then("the centroid should be equal to the points")
+      centroid should be (p1)
+
+    }
+
+    it ("should throw an exception when computing centroids from a single point") {
+
+      Given("a single point")
+      val p = Point(0, 0)
+
+      When("computing its centroids")
+
+      Then("an exception should be thrown")
+      intercept[IllegalArgumentException] {
+        Centroid.fromPoints(p)
+      }
+
+    }
+
   }
 
 }

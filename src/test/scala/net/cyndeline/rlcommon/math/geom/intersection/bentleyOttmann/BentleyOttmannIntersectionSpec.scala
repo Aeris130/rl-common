@@ -4,13 +4,15 @@ import net.cyndeline.rlcommon.SpecImports
 import net.cyndeline.rlcommon.math.geom.{DPoint, Line, Point}
 
 class BentleyOttmannIntersectionSpec extends SpecImports {
-  private val algorithm = new BentleyOttmannIntersection()
+  private val algorithm = BentleyOttmannIntersection.withoutSinglePointIntersections
+  private val algWithSinglePoints = BentleyOttmannIntersection.withSinglePointIntersections
 
   // The regular line class considers lines with the same coordinate identical.
   class IDSegment(val id: Int, start: Point, stop: Point) extends Line(start, stop) {
 
     def this(id: Int) = this(id, Point(3, 3), Point(5, 3))
 
+    override def toString: String = s"Seg[$id][${start.asTuple} to ${stop.asTuple}"
     override def equals(other: Any): Boolean = other match {
       case i: IDSegment => id == i.id
       case _ => false
@@ -192,6 +194,374 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersection._1.isSinglePoint should be (true)
       intersection._1.pointIntersection should be (s1.intersection(s2).get.pointIntersection)
       segSet(intersection._2) should be (Set(s1, s2))
+
+    }
+
+    it ("should not detect intersections in a set with separate single-point segments") {
+
+      Given("three different single-point segments")
+      val s1 = Line((0, 0), (0, 0))
+      val s2 = Line((1, 1), (1, 1))
+      val s3 = Line((2, 2), (2, 2))
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(s1, s2, s3)
+
+      Then("no intersections should be found")
+      intersections should be ('empty)
+
+    }
+
+    it ("should detect intersections between overlapping single-point segments") {
+
+      Given("multiple single.point segments overlapping")
+      val p = Point(5, 5)
+      val s1 = new IDSegment(0, p, p)
+      val s2 = new IDSegment(1, p, p)
+      val s3 = new IDSegment(2, p, p)
+      val s4 = new IDSegment(3, p, p)
+      val s5 = new IDSegment(4, p, p)
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(s1, s2, s3, s4, s5)
+
+      Then("an intersection should be found between the segments")
+      intersections should have size 1
+      assert(intersections.head._1.isInterval)
+      assert(intersections.exists(o => o._1.overlap == (p, p) && segSet(o._2) == Set(s1, s2, s3, s4, s5)))
+
+    }
+
+    it ("should detect intersections between a point and a segment") {
+
+      Given("a point and a segment that overlaps")
+      val s1 = Line((0, 0), (3, 3))
+      val s2 = Line((2, 2), (2, 2))
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(s1, s2)
+
+      Then("an intersection should be found between s1 and s2")
+      intersections should have size 1
+      assert(!intersections.exists(_._1.isSinglePoint))
+      assert(intersections.exists(o => o._1.overlap == (s2.start, s2.stop) && segSet(o._2) == Set(s1, s2)))
+
+    }
+
+    it ("should detect separate intersections between a point and multiple segments") {
+
+      Given("a point and two segments that overlaps")
+      val s1 = Line((0, 0), (4, 4))
+      val s2 = Line((2, 2), (2, 2))
+      val s3 = Line((0, 4), (4, 0))
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(s1, s2, s3)
+
+      Then("an intersection interval should be found between s1, s2 and s3")
+      val overlaps = intersections.filter(_._1.isInterval)
+      overlaps should have size 1
+      assert(overlaps.exists(o => o._1.overlap == (s2.start, s2.stop) && segSet(o._2) == Set(s1, s2, s3)))
+
+      And("an intersection point should be found between s1 and s3")
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == s2.start.toDouble && segSet(o._2) == Set(s1, s3)))
+
+    }
+
+    it ("should detect separate intersections between two overlapping points and multiple segments") {
+
+      Given("two points and two segments that overlaps")
+      val s1 = new IDSegment(1, Point(0, 0), Point(4, 4))
+      val s2_1 = new IDSegment(2, Point(2, 2), Point(2, 2))
+      val s2_2 = new IDSegment(22, Point(2, 2), Point(2, 2))
+      val s3 = new IDSegment(3, Point(0, 4), Point(4, 0))
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(s1, s2_1, s2_2, s3)
+
+      Then("an intersection should be found between s1, s2 and s3")
+      val overlaps = intersections.filter(_._1.isInterval)
+      overlaps should have size 1
+      assert(overlaps.exists(o => o._1.overlap == (s2_1.start, s2_1.stop) && segSet(o._2) == Set(s1, s2_1, s2_2, s3)))
+
+      And("an intersection should be found between s1 and s3")
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == s2_1.start.toDouble && segSet(o._2) == Set(s1, s3)))
+
+    }
+
+    it ("should detect a common intersection between a point and multiple collinear segments") {
+
+      Given("two collinear segments and a single-point segment")
+      val s1 = new IDSegment(1, Point(0, 0), Point(4, 4))
+      val s2 = new IDSegment(2, Point(0, 0), Point(4, 4))
+      val s3 = new IDSegment(3, Point(2, 2), Point(2, 2))
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(s1, s2, s3)
+
+      Then("an intersection should be found between s1, s2 and s3, and between s1 and s2")
+      intersections should have size 2
+      assert(intersections.exists(o => o._1.overlap == (s3.start, s3.stop) && segSet(o._2) == Set(s1, s2, s3)))
+      assert(intersections.exists(o => o._1.overlap == (s1.start, s1.stop) && segSet(o._2) == Set(s1, s2)))
+
+    }
+
+    it ("should detect intersections between segments intersecting at both sources and targets") {
+
+      Given("four segments that intersect at (4,4) using their sources and targets")
+      val l1 = Line((2, 2), (4, 4))
+      val l2 = Line((2, 6), (4, 4))
+      val l3 = Line((6, 6), (4, 4))
+      val l4 = Line((6, 2), (4, 4))
+
+      val s1 = Segment(1, l1)
+      val s2 = Segment(2, l2)
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(l1, l2, l3, l4)
+
+      Then("an intersection at (4,4) should be found")
+      intersections should have size 1
+      intersections.head._1.isSinglePoint should be (true)
+      intersections.head._1.pointIntersection should be (DPoint(4, 4))
+      segSet(intersections.head._2) should be (Set(l1, l2, l3, l4))
+
+    }
+
+    it ("should detect corner intersections") {
+
+      Given("four segments making up a rectangle from (2,4) to (4,6)")
+      val l1 = Line((2, 4), (2, 6))
+      val l2 = Line((2, 4), (4, 4))
+      val l3 = Line((2, 6), (4, 6))
+      val l4 = Line((4, 4), (4, 6))
+
+      When("computing the intersections of the set")
+      val intersections = algorithm.computeIntersections(l1, l2, l3, l4)
+
+      Then("four corner intersections should be found")
+      intersections.filter(_._1.isInterval) should be ('empty)
+      intersections should have size 4
+      assert(intersections.exists(o => o._1.pointIntersection == DPoint(2, 4) && segSet(o._2) == Set(l1, l2)))
+      assert(intersections.exists(o => o._1.pointIntersection == DPoint(4, 4) && segSet(o._2) == Set(l2, l4)))
+      assert(intersections.exists(o => o._1.pointIntersection == DPoint(2, 6) && segSet(o._2) == Set(l1, l3)))
+      assert(intersections.exists(o => o._1.pointIntersection == DPoint(4, 6) && segSet(o._2) == Set(l3, l4)))
+
+    }
+
+    it ("should handle single-point segments at the target of another segment") {
+
+      Given("a segment 1 ending in segment 2 at (4,4), with 4 other single-point segments")
+      val l1 = new IDSegment(0, Point(2, 2), Point(4, 4))
+      val l2 = new IDSegment(1, Point(4, 2), Point(4, 7))
+      val l3 = new IDSegment(2, Point(4, 4), Point(4, 4))
+      val l4 = new IDSegment(3, Point(4, 4), Point(4, 4))
+      val l5 = new IDSegment(4, Point(4, 4), Point(4, 4))
+      val l6 = new IDSegment(5, Point(4, 4), Point(4, 4))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2, l3, l4, l5, l6)
+
+      Then("an intersection between all 6 segments should be found at (4,4)")
+      val point = intersections.filter(_._1.isSinglePoint)
+      point should have size 1
+      segSet(point.head._2) should equal (Set(l1, l2, l3, l4, l5, l6))
+
+      And("an overlap between all 6 segments should be found at (4,4)")
+      val overlap = intersections.filter(_._1.isInterval)
+      overlap should have size 1
+      segSet(overlap.head._2) should equal (Set(l1, l2, l3, l4, l5, l6))
+
+    }
+
+    it ("should handle multiple single-point segments at the source of another segment") {
+
+      Given("a segment from (2,3) to (5,4) and two single-point segments at (2,3)")
+      val l1 = new IDSegment(0, Point(2, 3), Point(5, 4))
+      val l2 = new IDSegment(1, Point(2, 3), Point(2, 3))
+      val l3 = new IDSegment(2, Point(2, 3), Point(2, 3))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2, l3)
+
+      Then("an overlap between the three segments should be found")
+      val overlap = intersections.filter(_._1.isInterval)
+      overlap should have size 1
+      segSet(overlap.head._2) should equal (Set(l1, l2, l3))
+
+    }
+
+    it ("should handle a swapped segment intersecting an intersection point between two other segments") {
+
+      Given("an initial intersection between l1 and l2 (causing l2 to be swapped) and an intersection at (1,5) between l3, l4 and l1")
+      val l1 = Line((1, 2), (1, 6))
+      val l2 = Line((1, 2), (3, 2))
+      val l3 = Line((1, 5), (3, 5))
+      val l4 = Line((1, 5), (1, 7))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2, l3, l4)
+
+      Then("an intersection between l1 and l2 should be found at (1,2)")
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 2
+      assert(points.exists(o => o._1.pointIntersection == l1.start.toDouble && segSet(o._2) == Set(l1, l2)))
+
+      And("an intersection between l1, l3 and l4 should be found at (1,5)")
+      assert(points.exists(o => o._1.pointIntersection == l3.start.toDouble && segSet(o._2) == Set(l1, l3, l4)))
+
+      And("an overlap between l1 and l4 should be found at (1,5)->(1,6)")
+      val overlap = intersections.filter(_._1.isInterval)
+      overlap should have size 1
+      segSet(overlap.head._2) should equal (Set(l1, l4))
+
+    }
+
+    it ("should detect a point-intersection for two collinear segments that intersect at a point") {
+
+      Given("two collinear segments intersecting at (7,7)")
+      val l1 = Line((4, 4), (7, 7))
+      val l2 = Line((7, 7), (10, 10))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2)
+
+      Then("a single intersection should be found at (7,7)")
+      intersections should have size 1
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == l2.start.toDouble && segSet(o._2) == Set(l1, l2)))
+
+    }
+
+    it ("should detect an intersection between two collinear segment when a third collinear segment has the same start as the first, and ends after the second") {
+
+      Given("two collinear segments l1 and l2 intersecting at (7,7), and a third segment starting at l1's source and ending after (7,7)")
+      val l1 = new IDSegment(1, Point(4, 4), Point(7, 7))
+      val l2 = new IDSegment(2, Point(7, 7), Point(10, 10))
+      val l3 = new IDSegment(3, Point(4, 4), Point(9, 9))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2, l3)
+
+      Then("an intersection between l1, l2 and l3 should be found at (7,7)")
+      intersections should have size 3
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == l2.start.toDouble && segSet(o._2) == Set(l1, l2, l3)))
+
+      And("an overlap between l1 and l3 should exist between (4,4)->(7,7)")
+      val overlap = intersections.filter(_._1.isInterval)
+      overlap should have size 2
+      assert(overlap.exists(o => o._1.overlap == (l3.start, l1.stop) && segSet(o._2) == Set(l1, l3)))
+
+      And("an overlap between l2 and l3 should exist between (7,7)->(9,9)")
+      assert(overlap.exists(o => o._1.overlap == (l2.start, l3.stop) && segSet(o._2) == Set(l2, l3)))
+
+    }
+
+    it ("should detect an intersection between two collinear segment pairs, intersecting at their endpoints") {
+
+      Given("two segments l1 and l2: (2,2)->(5,5) intersecting at (5,5) with l3 and l4")
+      val l1 = new IDSegment(2, Point(2, 2), Point(5, 5))
+      val l2 = new IDSegment(3, Point(2, 2), Point(5, 5))
+      val l3 = new IDSegment(0, Point(5, 5), Point(8, 8))
+      val l4 = new IDSegment(1, Point(5, 5), Point(10, 10))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2, l3, l4)
+
+      Then("an intersection between l1, l2, l3 and l4 should be found")
+      intersections should have size 3
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == l1.stop.toDouble && segSet(o._2) == Set(l1, l2, l3, l4)))
+
+      And("an overlap between l1 and l2 should exist between (2,2)->(5,5)")
+      val overlap = intersections.filter(_._1.isInterval)
+      overlap should have size 2
+      assert(overlap.exists(o => o._1.overlap == (l1.start, l1.stop) && segSet(o._2) == Set(l1, l2)))
+
+      And("an overlap between l3 and l4 should exist between (5,5)->(8,8)")
+      assert(overlap.exists(o => o._1.overlap == (l3.start, l3.stop) && segSet(o._2) == Set(l3, l4)))
+
+    }
+
+    it ("should detect an intersection between two collinear endpoints covered by a collinear neighbor starting after the first, and ending at the target of the last") {
+
+      Given("an initial segment l3 intersecting l2 at (3,7), and a segment l1 that starts within l3 and ends at the target of l2")
+      val l1 = new IDSegment(1, Point(1, 5), Point(6, 10))
+      val l2 = new IDSegment(2, Point(3, 7), Point(6, 10))
+      val l3 = new IDSegment(3, Point(0, 4), Point(3, 7))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2, l3)
+
+      Then("an intersection between l1, l2 and l3 should be found")
+      intersections should have size 3
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == l3.stop.toDouble && segSet(o._2) == Set(l1, l2, l3)))
+
+      And("an overlap between l1 and l3 should exist between (1,5)->(3,7)")
+      val overlap = intersections.filter(_._1.isInterval)
+      overlap should have size 2
+      assert(overlap.exists(o => o._1.overlap == (l1.start, l3.stop) && segSet(o._2) == Set(l3, l1)))
+
+      And("an overlap between l1 and l2 should exist between (3,7)->(6,10)")
+      assert(overlap.exists(o => o._1.overlap == (l2.start, l1.stop) && segSet(o._2) == Set(l2, l1)))
+
+    }
+
+    it ("should detect an intersection between collinear pairs of segments ending at different targets") {
+
+      Given("a segment 5 and two collinear pairs of segments (2,4 and 1,3) beginning at the target of 4")
+      val l1 = new IDSegment(0, Point(5, 5), Point(8, 8))
+      val l2 = new IDSegment(1, Point(5, 5), Point(10, 10))
+      val l3 = new IDSegment(2, Point(5, 5), Point(8, 8))
+      val l4 = new IDSegment(3, Point(5, 5), Point(10, 10))
+      val l5 = new IDSegment(4, Point(0, 0), Point(5, 5))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l1, l2, l3, l4, l5)
+
+      Then("an intersection between all five segments should be found")
+      intersections should have size 3
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == l5.stop.toDouble && segSet(o._2) == Set(l1, l2, l3, l4, l5)))
+
+      And("an overlap between l1-4 should exist between (5,5)->(8,8)")
+      val overlap = intersections.filter(_._1.isInterval)
+      overlap should have size 2
+      assert(overlap.exists(o => o._1.overlap == (l1.start, l1.stop) && segSet(o._2) == Set(l1, l2, l3, l4)))
+
+      And("an overlap between l2 and l4 should exist between (5,5)->(10,10)")
+      assert(overlap.exists(o => o._1.overlap == (l2.start, l2.stop) && segSet(o._2) == Set(l2, l4)))
+
+    }
+
+    it ("should detect an intersection overlapped by multiple collinear segments") {
+
+      Given("six collinear segments overlapping or intersecting at (5,5)")
+      val l0 = new IDSegment(0, Point(4, 4), Point(7, 7))
+      val l1 = new IDSegment(1, Point(4, 4), Point(9, 9))
+      val l2 = new IDSegment(2, Point(5, 5), Point(8, 8))
+      val l3 = new IDSegment(3, Point(5, 5), Point(10, 10))
+      val l4 = new IDSegment(4, Point(2, 2), Point(5, 5))
+      val l5 = new IDSegment(5, Point(2, 2), Point(7, 7))
+
+      When("computing the intersections of the set")
+      val intersections = algWithSinglePoints.computeIntersections(l0, l1, l2, l3, l4, l5)
+
+      Then("an intersection between all six segments should be found at (5,5)")
+      val points = intersections.filter(_._1.isSinglePoint)
+      points should have size 1
+      assert(points.exists(o => o._1.pointIntersection == Point(5, 5).toDouble && segSet(o._2) == Set(l0, l1, l2, l3, l4, l5)))
 
     }
 
@@ -696,7 +1066,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
   }
 
   /* Detects if a vector contains duplicates before converting it to a set. */
-  private def segSet(vs: Vector[Line]): Set[Line] = {
+  private def segSet[L <: Line](vs: Vector[L]): Set[L] = {
     val unique = vs.distinct
     assert(unique.size == vs.size, "Duplicate entries found in segment intersection vector: " + vs.filter(n => vs.count(_ == n) > 1))
     unique.toSet

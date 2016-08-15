@@ -68,8 +68,16 @@ abstract class KDTree[E, R](prop: ElementProperty[E], rangeProp: RangeProperty[E
       else if (eValue > thisValue)
         // Greater or equal than the current value adds the element to the right side of the tree
         Branch(tree.value, tree.left, add(tree.right, depth + 1), prop, rangeProp)
-      else
-        tree // Duplicate, no need to add additional entries
+      else {
+        if (tree.value == e) {
+          tree // No duplicates should be inserted
+        } else {
+
+          // By default, new elements goes into the left tree if they share properties
+          Branch(tree.value, add(tree.left, depth + 1), tree.right, prop, rangeProp)
+
+        }
+      }
     }
 
     add(this, 0)
@@ -113,8 +121,8 @@ abstract class KDTree[E, R](prop: ElementProperty[E], rangeProp: RangeProperty[E
       } else {
         val eValue = prop.value(tree.value, dimension)
         val eToDeleteValue = prop.value(e, dimension)
-        val newLeft = if (eToDeleteValue < eValue) del(e, tree.left, nextDepth) else tree.left
-        val newRight = if (eToDeleteValue > eValue) del(e, tree.right, nextDepth) else tree.right
+        val newLeft = if (eToDeleteValue <= eValue) del(e, tree.left, nextDepth) else tree.left
+        val newRight = if (eToDeleteValue >= eValue) del(e, tree.right, nextDepth) else tree.right
         Branch(tree.value, newLeft, newRight, prop, rangeProp)
       }
     }
@@ -184,7 +192,19 @@ abstract class KDTree[E, R](prop: ElementProperty[E], rangeProp: RangeProperty[E
       } else if (soughtValue > treeValue) {
         recFind(tree.right, depth + 1)
       } else {
-        Some(tree) // Success
+
+        if (tree.value == value) {
+          Some(tree)
+        } else {
+          val leftResult = recFind(tree.left, depth + 1)
+
+          if (leftResult.isDefined) {
+            leftResult
+          } else {
+            val rightResult = recFind(tree.right, depth + 1)
+            Option(rightResult.orNull)
+          }
+        }
       }
     }
 

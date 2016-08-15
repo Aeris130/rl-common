@@ -83,13 +83,13 @@ class SpatialMultiMap[Shape, E, Range] private(kdTree: KDTree[Shape, Range], eMa
     * @param range A key range.
     * @return Every element mapped to a key within the range.
     */
-  def getRange(range: Range): Option[Set[E]] = {
+  def getRange(range: Range): Set[E] = {
     val rangeIntersection = kdTree.rangeSearch(range)
 
     if (rangeIntersection.nonEmpty)
-      Some(rangeIntersection.toSet.flatMap(eMap))
+      rangeIntersection.toSet.flatMap(eMap)
     else
-      None
+      Set()
   }
 
   /** @return Every value set in the map. */

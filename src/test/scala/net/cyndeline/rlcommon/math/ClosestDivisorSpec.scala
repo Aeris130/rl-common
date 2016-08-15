@@ -9,18 +9,19 @@ class ClosestDivisorSpec extends SpecImports {
   }
   describe("ClosestDivisor") {
 
-    it ("should throw an exception if the initial divisor is 0") {
+    it ("should return 1 if the initial divisor is 0") {
       val f = fixture
       import f._
 
-      Given("an initial divisor of 0")
+      Given("an initial divisor of 0 and some value")
       val divisor = 0
+      val value = 66
 
       When("computing the closest divisor")
-      Then("an exception should be thrown")
-      intercept[Error] {
-        finder.findClosestDivisor(1, divisor)
-      }
+      val closest = finder.findClosestDivisor(value, divisor)
+
+      Then("the result should be 1")
+      closest should be (1)
 
     }
 

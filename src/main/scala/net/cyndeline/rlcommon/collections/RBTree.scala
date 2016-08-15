@@ -226,11 +226,18 @@ object RBTree {
   /**
     * The main build method.
     */
-  def build[E : Ordering](e: E, es: E*): RBTree[E] = {
-    var tree = empty[E].insert(e)
-    val elements = es.iterator
-    while (elements.hasNext) {
-      tree = tree.insert(elements.next())
+  def build[E : Ordering](e: E, es: E*): RBTree[E] = build(Seq(e) ++ es.toSeq)
+
+  /**
+    * The main build method.
+    */
+  def build[E : Ordering](elements: Seq[E]): RBTree[E] = if (elements.isEmpty) {
+    empty[E]
+  } else {
+    var tree = empty[E].insert(elements.head)
+    val eIt = elements.drop(1).iterator
+    while (eIt.hasNext) {
+      tree = tree.insert(eIt.next())
     }
     tree
   }

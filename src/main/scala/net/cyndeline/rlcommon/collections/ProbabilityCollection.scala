@@ -17,12 +17,17 @@ import scala.util.Random
  * @constructor Creates a new probability collection.
  * @tparam E The type of object to assign weights to.
  */
-class ProbabilityCollection[E] private (val map: TreeMap[Int, E], originalWeight: Map[E, Int], summedWeight: Map[E, Int], totalWeight: Int) extends RandomCollection[E] {
+class ProbabilityCollection[E] private (val map: TreeMap[Double, E], originalWeight: Map[E, Double], summedWeight: Map[E, Double], totalWeight: Double) extends RandomCollection[E] {
+
+  /* Note: Using Double as keyset works here, since the only time the tree map is queried using a key is when the
+   * key is retrieved from the originalWeight map, thus equals() will hold since the weight there is the same
+   * object that was used when the entry in TreeMap was first created.
+   */
 
   /**
    * Creates an empty probability collection.
    */
-  def this() = this(TreeMap[Int, E](), Map[E, Int](), Map[E, Int](), 0)
+  def this() = this(TreeMap[Double, E](), Map[E, Double](), Map[E, Double](), 0)
 
   /**
    * Add an item and assign a weight to it.
@@ -30,7 +35,7 @@ class ProbabilityCollection[E] private (val map: TreeMap[Int, E], originalWeight
    * @param weight Weight to assign to the item. Must be higher than 0.
    * @param element Item to map height to.
    */
-  override def add(weight: Int, element: E): ProbabilityCollection[E] = {
+  override def add(weight: Double, element: E): ProbabilityCollection[E] = {
     require(!originalWeight.contains(element), s"The element $element already has an associated weight.")
     require(weight > 0, s"Only positive probability weights can be used for RandomCollections, element $element has weight $weight")
     val newTotalWeight = totalWeight + weight
@@ -45,7 +50,7 @@ class ProbabilityCollection[E] private (val map: TreeMap[Int, E], originalWeight
     var current = this
     val elements = collection.iterator
     while (elements.hasNext) {
-      val e: (Int, E) = elements.next()
+      val e: (Double, E) = elements.next()
       current = current.add(e._1, e._2)
     }
     current
@@ -60,13 +65,13 @@ class ProbabilityCollection[E] private (val map: TreeMap[Int, E], originalWeight
     val weightToSubtract = originalWeight(element)
     val eWeight = summedWeight(element)
 
-    def updateRefWeight(e: E, w: Int): Int = if (w > eWeight) w - weightToSubtract else w
+    def updateRefWeight(e: E, w: Double): Double = if (w > eWeight) w - weightToSubtract else w
 
     /* Since every weight is greater than 0, it means that every element added after x gets the weight of x added
-     * to its own weight, and will thus be greater. Any element added before x must have a lower weight.By subtracting
+     * to its own weight, and will thus be greater. Any element added before x must have a lower weight. By subtracting
      * the weight of x from all elements with weight greater than x, its affect on the collection is nullified.
      */
-    val updatedTree = (map - summedWeight(element))
+    val updatedTree = (map - eWeight)
       .map(entry => (updateRefWeight(entry._2, entry._1), entry._2))
     val updatedSummedWeights = (summedWeight - element)
       .map(entry => (entry._1, updateRefWeight(entry._1, entry._2)))
@@ -112,14 +117,14 @@ class ProbabilityCollection[E] private (val map: TreeMap[Int, E], originalWeight
    * Iterates over every weight and element in the collection.
    * @return An iterator over the collection.
    */
-  override def iterator: Iterator[(Int, E)] = originalWeight.map(_.swap).iterator
+  override def iterator: Iterator[(Double, E)] = originalWeight.map(_.swap).iterator
 
   /**
    * Used for testing to inspect values inside the tree map.
    * @return Returns a list of tuples where the weight is the combined weight as found in the map. Example: Three
    *         elements with weighted 1, 2 and 3 will have weights 1, 3 and 6 inside the map.
    */
-  def combinedWeights: Vector[(Int, E)] = summedWeight.map(_.swap).iterator.toVector.sortBy(_._1)
+  def combinedWeights: Vector[(Double, E)] = summedWeight.map(_.swap).iterator.toVector.sortBy(_._1)
 
   override def toString: String = s"Probability collection: ${iterator.mkString(", ")}"
   override def hashCode: Int = map.## ^ summedWeight.## ^ originalWeight.##
@@ -136,9 +141,9 @@ object ProbabilityCollection {
     * Creates a new collection with an initial set of elements and probabilities.
     * @param values All initial elements and probability weights.
     */
-  def from[E](values: (Int, E)*): ProbabilityCollection[E] = {
-    val allvalues = values.map(_._2)
-    require(allvalues.distinct.size == allvalues.size, "Duplicate values found in probability collection.")
+  def from[E](values: (Double, E)*): ProbabilityCollection[E] = {
+    val allValues = values.map(_._2)
+    require(allValues.distinct.size == allValues.size, "Duplicate values found in probability collection.")
 
     var pc = new ProbabilityCollection[E]()
     for (v <- values)

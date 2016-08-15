@@ -20,25 +20,23 @@ class Line(val start: Point, val stop: Point) {
     * @return True if this line is collinear with the other, otherwise false.
     */
   def collinearWith(other: Line): Boolean = {
-    val a = this.start
-    val b = this.stop
-    val c = other.start
-    val d = other.stop
-
-    val denom: Long = ((b.x.toLong - a.x.toLong) * (d.y.toLong - c.y.toLong)) -
-                      ((d.x.toLong - c.x.toLong) * (b.y.toLong - a.y.toLong))
-
-    denom == 0
+    pointsAreCollinear(start, stop, other.start) && pointsAreCollinear(start, stop, other.stop)
   }
 
   /**
     * @return The slope for this line, unspecified for vertical lines.
     */
   def slope: Double = {
+    assert(start != stop, "Attempted to compute slope for a single-point segment.")
     assert(start.x != stop.x, "Attempted to compute slope for a vertical segment.")
     (stop.y - start.y).toDouble / (stop.x - start.x)
   }
 
+  /**
+    * @param other Another line, may have the same coordinates as this one.
+    * @return The point segment or interval overlap (if the segments are collinear) between the two segments if they
+    *         overlap or intersect, otherwise None..
+    */
   def intersection(other: Line): Option[LineIntersection] = {
     val pointIntersect = intersectionPoint(other)
 
@@ -47,7 +45,10 @@ class Line(val start: Point, val stop: Point) {
     } else {
       val overlap = intersectionInterval(other)
 
-      if (overlap.isDefined)
+      /* A single-point overlap is only valid if one of the lines are single-coordinate, otherwise we have a common
+       * endpoint among collinear segments, which should be reported as a point rather than an interval.
+       */
+      if (overlap.isDefined && ((isSingleCoordinate || other.isSingleCoordinate) || overlap.get.overlap._1 != overlap.get.overlap._2))
         overlap
       else {
         // No inner intersection and no overlap found. Finish by checking the endpoints.
@@ -66,6 +67,24 @@ class Line(val start: Point, val stop: Point) {
   }
 
   /**
+    * @param other Another segment.
+    * @return True if the segments intersect or overlaps, otherwise false.
+    */
+  def intersects(other: Line): Boolean = intersection(other).nonEmpty
+
+  /**
+    * @param other Another segment.
+    * @return True if the segments share multiple coordinates, or if one or both are single-coordinate segments.
+    */
+  def overlaps(other: Line): Boolean = {
+    val i = intersection(other)
+    i.isDefined && i.get.isInterval
+  }
+
+  def containsX(x: Double): Boolean = Math.min(start.x, stop.x) <= x && x <= Math.max(start.x, stop.x)
+  def containsY(y: Double): Boolean = Math.min(start.y, stop.y) <= y && y <= Math.max(start.y, stop.y)
+
+  /**
     * @param p A point to check overlap for.
     * @return True if the point lies on this line segment, otherwise false.
     */
@@ -76,6 +95,12 @@ class Line(val start: Point, val stop: Point) {
     * @return True if the point lies on this line segment, otherwise false.
     */
   def containsPoint(p: DPoint): Boolean = {
+
+    /* Special case to handle single-point segments */
+    if (this.start == this.stop) {
+      return this.start.toDouble == p
+    }
+
     val a = start.toDouble
     val b = stop.toDouble
     val c = p
@@ -101,14 +126,37 @@ class Line(val start: Point, val stop: Point) {
   /**
     * Splits this line into n number of coordinates with equal distance between each other.
     * @param n Number of coordinates to split into, must be 2 or greater.
-    * @return n coordinate points, signifying sub intervals along the original line.
+    * @return n coordinate points, signifying sub intervals along the original line. If this line has equal start and
+    *         stop coordinates, only a single coordinate will be returned.
     */
   def split(n: Int): Vector[DPoint] = {
-    require(n > 1, "The number of splits must be > 1 (currently " + n + ").")
+    require(n > 1, s"The number of splits must be > 1 (currently $n).")
+    if (start == stop)
+      return Vector(start)
+
     // Actually, this formula computes the points that are 1/n away from the end point, but not the end point itself.
     // To include it, compute the n - 1 points instead.
     val d = n.toDouble - 1
     (for (i <- 0 until n) yield DPoint(start.x + ((i/d) * (stop.x - start.x)), start.y + ((i/d) * (stop.y - start.y)))).toVector
+  }
+
+  /**
+    * @return True if start and stop is equal, otherwise false.
+    */
+  def isSingleCoordinate: Boolean = start == stop
+
+  /**
+    * @param x An x value along this line.
+    * @return The corresponding y-value for the x coordinate. Only defined for non-vertical lines.
+    */
+  def y(x: Double): Double = {
+    require(start.x != stop.x || start == stop, "Vertical segments does not have a single y-value defined for any given x value.")
+    require(x >= start.x && x <= stop.x, "Attempted to compute y value for an x-value outside the lines start and stop coordinates.")
+    if (start == stop) {
+      start.y
+    } else {
+      (slope * (x - start.x)) + start.y
+    }
   }
 
   /**
@@ -172,6 +220,17 @@ class Line(val start: Point, val stop: Point) {
     val c = other.start
     val d = other.stop
 
+    /* Special case to prevent the code below from bugging out when one segment has identical start/stop coordinates. */
+    val identical: Option[Point] = if (a == b) Some(a) else if (c == d) Some(c) else None
+    if (identical.isDefined) {
+      // Have to check both anyways...
+      if (this.containsPoint(identical.get) && other.containsPoint(identical.get)) {
+        return buildIntersectionSegment(identical.get, identical.get)
+      } else {
+        return None
+      }
+    }
+
     if (collinearWith(other)) { // Parallel lines
 
       /* Two segments a-----b and c-----d */
@@ -193,6 +252,8 @@ class Line(val start: Point, val stop: Point) {
     }
 
   }
+
+  private def pointsAreCollinear(a: Point, b: Point, c: Point): Boolean = (b.y - a.y) * (c.x - b.x) == (c.y - b.y) * (b.x - a.x)
 
   private def signed2DTriArea(a: DPoint, b: DPoint, c: DPoint): Double = (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x)
 

@@ -101,7 +101,7 @@ class ProbabilityCollectionSpec extends SpecImports {
     it ("should allow creation from a sequence of tuples") {
 
       Given("a list of weight/element tuples")
-      val list = Vector((1, "A"), (2, "B"))
+      val list = Vector((1.0, "A"), (2.0, "B"))
 
       When("creating a collection")
       val collection = ProbabilityCollection.from[String](list:_*)
@@ -129,7 +129,7 @@ class ProbabilityCollectionSpec extends SpecImports {
 
     }
 
-    it ("should preserve weights and elements when updating the collection") {
+    it ("should preserve weights and elements when adding elements to the collection") {
 
       Given("3 elements with weights 1, 2 and 3")
 
@@ -139,6 +139,20 @@ class ProbabilityCollectionSpec extends SpecImports {
       Then("the collection should contain the same elements")
       c.combinedWeights should equal (Vector((1, "A"), (3, "B"), (6, "C")))
       c.iterator.toVector should equal (Vector((1, "A"), (2, "B"), (3, "C")))
+
+    }
+
+    it ("should preserve weights and elements when adding and removing elements to the collection") {
+
+      Given("3 elements with weights 1, 2 and 3")
+      val collection = new ProbabilityCollection[String]().add(1, "A").add(2, "B").add(3, "C")
+
+      When("removing one value and adding another")
+      val updated = collection.remove("B").add(4, "D")
+
+      Then("the collection should adjust values correctly")
+      updated.combinedWeights should equal (Vector((1, "A"), (4, "C"), (8, "D")))
+      updated.iterator.toVector should equal (Vector((1, "A"), (3, "C"), (4, "D")))
 
     }
 

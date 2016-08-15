@@ -71,7 +71,8 @@ class PriorityQueue[E] private (private val rbTree: RBTree[E])(implicit ord: Ord
   override def toString: String = if (isEmpty) {
     "Empty Priority Queue"
   } else {
-    "Priority Queue: [" ++ values.mkString(", ") + "]"
+    val nl = System.getProperty("line.separator")
+    "Priority Queue: [" ++ values.mkString(s", $nl") + "]"
   }
 
 }

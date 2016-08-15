@@ -78,6 +78,8 @@ case class SegmentPoint[L <: Line](p: Point, t: PointType, segment: Segment[L]) 
   * Note: The segments in-between are not sorted according to above/below status. Whenever an intersection with n
   * segments are updated by receiving additional segments, if any of the new segments are higher/lower than the current
   * upper/lower segment, they will take their place. Whatever segments remains will be stored in-between.
+  *
+  * @param upper One ore more upper neighbors. Will contain multiple segments if they're all collinear.
   */
 case class Intersection[L <: Line](p: DPoint, upper: Segment[L], lower: Segment[L], inBetween: Set[Segment[L]]) extends EventPoint[L](p, Intersect) {
   def update(segment: Segment[L]): Intersection[L] = {

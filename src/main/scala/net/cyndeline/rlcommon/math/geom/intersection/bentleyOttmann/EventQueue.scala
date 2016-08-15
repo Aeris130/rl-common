@@ -51,7 +51,8 @@ class EventQueue[L <: Line] private (currentIntersections: Map[DPoint, Intersect
   override def toString: String = if (isEmpty) {
     "Empty queue"
   } else {
-    queue.values.mkString(", ")
+    val nl = System.getProperty("line.separator")
+    "Event queue:" + nl + queue.values.mkString(s", $nl")
   }
 
 }

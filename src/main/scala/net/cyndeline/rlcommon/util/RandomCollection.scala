@@ -20,7 +20,7 @@ trait RandomCollection[E] {
    * @param weight Weight to assign to the item. Must be higher than 0.
    * @param element Item to map height to.
    */
-  def add(weight: Int, element: E): RandomCollection[E]
+  def add(weight: Double, element: E): RandomCollection[E]
 
   /**
    * Adds elements and weights of another collection to this one.
@@ -63,6 +63,6 @@ trait RandomCollection[E] {
    * Iteratoes over every weight and element in the collection.
    * @return An iterator over the collection.
    */
-  def iterator: Iterator[(Int, E)]
+  def iterator: Iterator[(Double, E)]
 
 }

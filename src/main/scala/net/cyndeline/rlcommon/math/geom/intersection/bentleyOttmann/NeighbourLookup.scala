@@ -7,7 +7,7 @@ import net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann.SweepLine.Li
 /**
   * Helper methods for the sweep line.
   */
-class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[LineEntry[L]], ord: Ordering[LineEntry[L]]) {
+class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[LineEntry[L]])(implicit ord: Ordering[LineEntry[L]]) {
 
   /**
     * @param segment A segment intersecting the sweep line.
@@ -15,8 +15,8 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
     *         entry on the sweep line.
     */
   def aboveAndBelow(segment: Segment[L],
-                    belowValid: Segment[L] => Boolean = defaultValidation _,
-                    aboveValid: Segment[L] => Boolean = defaultValidation _): (Option[Segment[L]], Option[Segment[L]]) = {
+                    belowValid: Segment[L] => Boolean = defaultValidation,
+                    aboveValid: Segment[L] => Boolean = defaultValidation): (Option[Segment[L]], Option[Segment[L]]) = {
     val entry = entries(segment.id)
     findNeighbors(entry, null, null, data, belowValid, aboveValid)
   }
@@ -42,8 +42,8 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
                             previousHighestLower: LineEntry[L],
                             previousLowestHigher: LineEntry[L],
                             current: RBTree[LineEntry[L]],
-                            leftIsValid: Segment[L] => Boolean = defaultValidation _,
-                            rightIsValid: Segment[L] => Boolean = defaultValidation _): (Option[Segment[L]], Option[Segment[L]]) = {
+                            leftIsValid: Segment[L] => Boolean = defaultValidation,
+                            rightIsValid: Segment[L] => Boolean = defaultValidation): (Option[Segment[L]], Option[Segment[L]]) = {
     if (current.isEmpty) {
       (None, None)
     } else if (current.value != seg) {
@@ -58,14 +58,14 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
     } else {
 
       // Match found
-      val below = findHighestInLeftSubtree(current.left, leftIsValid).getOrElse {
+      val below = findClosestInSubtree(current, false, leftIsValid).getOrElse {
         if (previousHighestLower != null && leftIsValid(previousHighestLower.segment))
           previousHighestLower.segment
         else
           null
       }
 
-      val above = findLowestInRightSubtree(current.right, rightIsValid).getOrElse {
+      val above = findClosestInSubtree(current, true, rightIsValid).getOrElse {
         if (previousLowestHigher != null && rightIsValid(previousLowestHigher.segment))
           previousLowestHigher.segment
         else
@@ -86,9 +86,12 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
     *
     * If the collinear segments are overlapping, that means that the first collinear segment in the tree that is found
     * when looking for s contains all other collinear segments in one of its two sub trees (otherwise there would
-    * somewhere be a non.collinear segment dividing the collinear segments into two, placing it between them on the
+    * somewhere be a non-collinear segment dividing the collinear segments into two, placing it between them on the
     * sweep line). This sub tree may contain non-collinear segments, but the left (right) tree has its leftmost
     * (rightmost) segments collinear.
+    *
+    * NOTE: This method may be used to find both upper and lower closest neighbors, but this description only concerns
+    * upper neighbors. The description for lower is similar but reverses the order in which nodes are visited.
     *
     * To find the lowest upper non-collinear neighbor of s, find a collinear segment connected to a non-collinear
     * neighbor greater than itself. This can be done in NlogN time using by calling procA on the root of the BST.
@@ -108,12 +111,22 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
     * procC: Do an in-order search on a given segment, and don't traverse nodes that are collinear with s or their
     * sub-trees. Return the first result found this way.
     *
+    * NOTE: This method cannot be used to reliably find segments enclosed by collinear neighbors by adjusting the
+    * isCollinear method.
+    *
     * @param segment The collinear segment s.
+    * @param upper True if the upper neighbor should be found, false if lower.
     * @param isCollinear Returns true if two segments are collinear. Used to make testing easier.
     * @return The lowest upper non-collinear neighbor of s, or None if s if the uppermost segment or if every neighbor
     *         above it is collinear with s.
     */
-  def closestNonCollinearAbove(segment: Segment[L], isCollinear: (Segment[L], Segment[L]) => Boolean = (s1: Segment[L], s2: Segment[L]) => s1.collinearWith(s2)): Option[Segment[L]] = {
+  def closestNonCollinear(segment: Segment[L], upper: Boolean = true, isCollinear: (Segment[L], Segment[L]) => Boolean = (s1: Segment[L], s2: Segment[L]) => s1.collinearWith(s2)): Option[Segment[L]] = {
+    // Next and opposite causes the search to switch between in-order and its reverse
+    def nextChild(n: RBTree[LineEntry[L]]) = if (upper) n.left else n.right
+    def oppositeChild(n: RBTree[LineEntry[L]]) = if (upper) n.right else n.left
+    def lt(a: LineEntry[L], b: LineEntry[L]) = if (upper) a < b else a > b
+    def gt(a: LineEntry[L], b: LineEntry[L]) = if (upper) a > b else a < b
+
     def procA(s: LineEntry[L], current: RBTree[LineEntry[L]], lowestUpper: RBTree[LineEntry[L]]): Option[LineEntry[L]] = if (current.isEmpty) {
       None
     } else if (isCollinear(current.value.segment, s.segment)) {
@@ -121,21 +134,23 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
       procB(s, current, lowestUpper)
 
     } else {
-      val updatedLowestUpper = if (lowestUpper == null && ord.gt(current.value, s)) current
+      val updatedLowestUpper = if (lowestUpper == null && gt(current.value, s)) current
                                /* The current segment needs to be lower than the so-far lowest upper segment found, but
                                 * still greater than s to be assigned as the new lowest upper segment in the tree.
                                 */
-                               else if (lowestUpper != null && ord.lt(current.value, lowestUpper.value) && ord.gt(current.value, s)) current
+                               else if (lowestUpper != null && lt(current.value, lowestUpper.value) && gt(current.value, s)) current
                                else lowestUpper
 
-      if (ord.lt(s, current.value))
-        procA(s, current.left, updatedLowestUpper)
+      if (lt(s, current.value))
+        procA(s, nextChild(current), updatedLowestUpper)
       else
-        procA(s, current.right, updatedLowestUpper)
+        procA(s, oppositeChild(current), updatedLowestUpper)
     }
 
-    def procB(s: LineEntry[L], current: RBTree[LineEntry[L]], lowestUpper: RBTree[LineEntry[L]]): Option[LineEntry[L]] =
-      if (!current.right.isEmpty && !isCollinear(s.segment, current.right.value.segment)) {
+    def procB(s: LineEntry[L], current: RBTree[LineEntry[L]], lowestUpper: RBTree[LineEntry[L]]): Option[LineEntry[L]] = {
+      val opposite = oppositeChild(current)
+
+      if (!opposite.isEmpty && !isCollinear(s.segment, opposite.value.segment)) {
         // The collinear segment with an upper non-collinear neighbor has been found
         val neighborFromChild = procC(s.segment, current)
 
@@ -147,32 +162,34 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
           None
         }
 
-      } else if (!current.right.isEmpty && isCollinear(s.segment, current.right.value.segment)) {
-        procB(s, current.right, lowestUpper)
-      } else if (current.right.isEmpty && lowestUpper != null) {
+      } else if (!opposite.isEmpty && isCollinear(s.segment, opposite.value.segment)) {
+        procB(s, opposite, lowestUpper)
+      } else if (opposite.isEmpty && lowestUpper != null) {
         Some(lowestUpper.value)
       } else {
-        None // No right non-collinear child, and lowest upper is null
+        None // No upper non-collinear child, and lowest upper is null
       }
+    }
+
 
     def procC(s: Segment[L], current: RBTree[LineEntry[L]]): Option[RBTree[LineEntry[L]]] = if (current.isEmpty){
       None
     } else {
       val cs = current.value.segment
 
-      /* If the current node is collinear, the left child can be pruned since it having a greater non-collinear
+      /* If the current node is collinear, the closer child can be pruned since it having a greater non-collinear
        * neighbor would put that neighbor between the current node and the child.
        */
-      val left: Option[RBTree[LineEntry[L]]] = if (isCollinear(s, cs))
+      val closer: Option[RBTree[LineEntry[L]]] = if (isCollinear(s, cs))
         None
       else
-        procC(s, current.left)
+        procC(s, nextChild(current))
 
-      val result = left.getOrElse {
+      val result = closer.getOrElse {
         if (!isCollinear(s, cs))
           current
         else
-          procC(s, current.right).orNull
+          procC(s, oppositeChild(current)).orNull
       }
       Option(result)
     }
@@ -189,7 +206,7 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
     * This is achieved by pruning any right (left) sub tree whose root is non-collinear and lies above (below) the
     * segment s, as that segment otherwise would be positioned between two or more collinear segments on the sweep line.
     * @param s A segment in the sweep line.
-    * @return Every segment on the line collinear with s.
+    * @return Every segment on the line collinear with s, including the ones only sharing a single coordinate with s.
     */
   def findAllCollinearSegments(s: Segment[L]): Vector[Segment[L]] = {
     var result = Vector[Segment[L]]()
@@ -202,69 +219,109 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
       /* Keep going left and right regardless of ordering if the current segment is collinear, as only a non-collinear
        * segment would cause a split between collinear neighbors.
        */
-      if (currentIsCollinearWithS || !ord.lt(current.value, segment))
+      if (currentIsCollinearWithS || !(current.value < segment))
         search(current.left)
 
-      if (currentIsCollinearWithS || !ord.gt(current.value, segment))
+      if (currentIsCollinearWithS || !(current.value > segment))
         search(current.right)
 
-      if (current.value.segment != s && currentIsCollinearWithS)
-        result = current.value.segment +: result
+      /* Here we need to not only check collinearity, but also confirm that the collinear segment intersects s in more
+       * than one point unless it is single-coordinate. The intersection will always be defined as two collinear lines
+       * cut by the sweep-line must share at least one coordinate.
+       */
+      if (current.value.segment != s && currentIsCollinearWithS) {
+          result = current.value.segment +: result
+      }
+
     }
     search(data)
     result
   }
 
   /**
-    * In-order traversal that finds the lowest neighbor above a root.
-    * @param rightChild The right child of a root (may be empty).
+    * Finds a segment closest to another segment s using a user-specified predicate.
+    * @param s A segment on the sweep line.
+    * @param upper True if the candidate should be searched for above s, false if below.
+    * @param isValid Function that returns true for any segment != s that can be returned.
+    * @return The closest valid segment to s, or None if no such segment exists.
+    */
+  def findClosest(s: Segment[L], upper: Boolean, isValid: (Segment[L] => Boolean)): Option[Segment[L]] = {
+    def nextChild(n: RBTree[LineEntry[L]]) = if (upper) n.left else n.right
+    def oppositeChild(n: RBTree[LineEntry[L]]) = if (upper) n.right else n.left
+    def gteq(a: LineEntry[L], b: LineEntry[L]) = if (upper) a >= b else a <= b
+
+    // Find the top-most node containing a segment above (below) or at s
+    def findTop(current: RBTree[LineEntry[L]]): Option[RBTree[LineEntry[L]]] = if (current.isEmpty) {
+      None
+    } else if (gteq(current.value, entries(s.id))) {
+      Some(current)
+    } else {
+      findTop(oppositeChild(current))
+    }
+
+    // Do in-order (reversed in-order) search until found, stop at the next child of s
+    def search(current: RBTree[LineEntry[L]]): Option[RBTree[LineEntry[L]]] = if (current.isEmpty) {
+      None
+    } else {
+
+      /* Only search lower (upper) children if we're not at s, and not on a segment that is lower (higher) than s. */
+      val next = if (current.value.segment != s && gteq(current.value, entries(s.id))) {
+        search(nextChild(current))
+      } else {
+        None
+      }
+
+      val result = Option(next.getOrElse {
+        val c = current.value.segment
+        if (c != s && gteq(current.value, entries(s.id)) && isValid(c))
+          current
+        else
+          search(oppositeChild(current)).orNull
+      })
+
+      result
+    }
+
+    val top = findTop(data)
+    if (top.isDefined) {
+      val r = search(top.get)
+      if (r.isDefined)
+        Some(r.get.value.segment)
+      else
+        None
+    } else {
+      None
+    }
+  }
+
+  /**
+    * In-order traversal that finds the lowest/highest neighbor above/below a root.
+    * @param root The root (may not be empty).
+    * @param upper True if lowest neighbor above the root should be found, false if looking for the highest neighbor
+    *              below.
     * @param isValid Function that returns true if a found segment is valid for return.
     * @return The lowest value in the sub-tree starting at the right child, or None if the child is empty or if no
     *         element was valid.
     */
-  private def findLowestInRightSubtree(rightChild: RBTree[LineEntry[L]], isValid: Segment[L] => Boolean): Option[Segment[L]] = if (rightChild.isEmpty) {
-    None
-  } else {
+  private def findClosestInSubtree(root: RBTree[LineEntry[L]], upper: Boolean, isValid: Segment[L] => Boolean): Option[Segment[L]] = {
+    require(!root.isEmpty, "Attempted to find the closest neighbor of an empty tree node.")
+    def upperChild(r: RBTree[LineEntry[L]]) = if (upper) r.right else r.left
+    def lowerChild(r: RBTree[LineEntry[L]]) = if (upper) r.left else r.right
+
     def inOrder(n: RBTree[LineEntry[L]]): Option[Segment[L]] = if (n.isEmpty) {
       None
     } else {
-      val result = inOrder(n.left).getOrElse {
+      val result = inOrder(lowerChild(n)).getOrElse {
         if (isValid(n.value.segment))
           n.value.segment
         else
-          inOrder(n.right).orNull
+          inOrder(upperChild(n)).orNull
       }
 
       Option(result)
     }
 
-    inOrder(rightChild)
-  }
-
-  /**
-    * Reversed In-order traversal that finds the highest neighbor below a root.
-    * @param leftChild The left child of a root (may be empty).
-    * @param isValid Function that returns true if a found segment is valid for return.
-    * @return The highest value in the sub-tree starting at the left child, or None if the child is empty or if no
-    *         element was valid.
-    */
-  private def findHighestInLeftSubtree(leftChild: RBTree[LineEntry[L]], isValid: Segment[L] => Boolean): Option[Segment[L]] = if (leftChild.isEmpty) {
-    None
-  } else {
-    def reverseInOrder(n: RBTree[LineEntry[L]]): Option[Segment[L]] = if (n.isEmpty) {
-      None
-    } else {
-      val result = reverseInOrder(n.right).getOrElse {
-        if (isValid(n.value.segment))
-          n.value.segment
-        else
-          reverseInOrder(n.left).orNull
-      }
-
-      Option(result)
-    }
-
-    reverseInOrder(leftChild)
+    inOrder(upperChild(root))
   }
 
   private def defaultValidation(s: Segment[L]) = true

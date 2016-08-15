@@ -104,6 +104,20 @@ class KDTreeSpec extends SpecImports {
 
     }
 
+    it ("should add an element e to a tree with an element sharing the initial property of e") {
+
+      Given("two points with x value 4")
+      val p1 = Point(4, 5)
+      val p2 = Point(4, 6)
+
+      When("creating the tree using the points")
+      val tree = KDTree.point2DTree(Vector(p1)).insert(p2)
+
+      Then("the tree should contain both points")
+      tree.values.toSet should be (Set(p1, p2))
+
+    }
+
     it ("should add individual nodes to the tree") {
 
       Given("a tree with three points")
@@ -191,6 +205,26 @@ class KDTreeSpec extends SpecImports {
 
     }
 
+    it ("should delete elements sharing common properties") {
+
+      Given("a tree with four rectangles starting at point 2")
+      val r1 = Rectangle(Point(2, 2), 1, 2)
+      val r2 = Rectangle(Point(2, 3), 1, 4)
+      val r3 = Rectangle(Point(2, 3), 5, 4)
+      val r4 = Rectangle(Point(2, 2), 5, 2)
+      val tree = KDTree.rectangleTree(Vector(r1, r2, r3, r4))
+
+      When("deleting all elements in the tree")
+      val d1 = tree.delete(r1)
+      val d2 = d1.delete(r2)
+      val d3 = d2.delete(r3)
+      val d4 = d3.delete(r4)
+
+      Then("the tree should be empty")
+      assert(d4.isEmpty, "Not all elements were deleted from the tree")
+
+    }
+
     it ("should confirm that a value exists") {
 
       Given("a tree with the point (35, 25)")
@@ -216,6 +250,20 @@ class KDTreeSpec extends SpecImports {
 
       Then("the result should be false")
       isContained should be (false)
+
+    }
+
+    it ("should confirm that a value doesn't exists even though it partially contains some of the values attributes") {
+
+      Given("a tree with the point (2,2)")
+      val root = Point(2, 2)
+      val tree = KDTree.point2DTree(Vector(root))
+
+      When("checking if it contains (2,3)")
+      val contains23 = tree.contains(Point(2, 3))
+
+      Then("the result should be false")
+      contains23 should be (false)
 
     }
 
@@ -353,17 +401,24 @@ class KDTreeSpec extends SpecImports {
 
     it ("should report tangential rectangles as intersecting") {
 
-      Given("a tree with a rectangle set")
+      Given("a tree with a rectangle starting at (0,5) with width 4 and height 3")
       val f = rectangleSet
       import f._
-      val tree = KDTree.rectangleTree(elements)
+      val tree = KDTree.rectangleTree(Vector(r3))
 
-      When("searching using a range that shares a segment with r3")
-      val range = Rectangle(Point(0, 7), 3, 2)
-      val inRange = tree.rangeSearch(range)
+      When("searching using ranges that shares a segment with r3")
+      val rangeAbove = Rectangle(Point(0, 7), 3, 2)
+      val rangeLeft = Rectangle(Point(-1, 6), 2, 3)
+      val rangeRight = Rectangle(Point(3, 4), 3, 2)
+      val rangeBottom = Rectangle(Point(0, 5), 4, 1)
+      assert(rangeAbove.overlaps(r3))
+      assert(rangeLeft.overlaps(r3))
+      assert(rangeRight.overlaps(r3))
+      assert(rangeBottom.overlaps(r3))
+      val inRange = Seq(tree.rangeSearch(rangeAbove), tree.rangeSearch(rangeLeft), tree.rangeSearch(rangeRight), tree.rangeSearch(rangeBottom)).flatten
 
-      Then("rectangle 3 should be in range")
-      inRange should be (Seq(r3))
+      Then("rectangle 3 should be in range for all queries")
+      inRange should be (Seq(r3, r3, r3, r3))
 
     }
 
