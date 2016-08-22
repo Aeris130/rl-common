@@ -1,33 +1,13 @@
-package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
+package net.cyndeline.rlcommon.math.geom.intersection.common
 
 import java.util.Comparator
 
 import net.cyndeline.rlcommon.collections.RBTree
-import SweepLine._
-import net.cyndeline.rlcommon.math.geom.{DPoint, Line, Point}
+import net.cyndeline.rlcommon.math.geom.{Line, RPoint}
+import net.cyndeline.rlcommon.math.geom.intersection.common.SweepLine._
+import spire.math.Rational
 
 import scala.collection.mutable.ArrayBuffer
-
-
-/*
-        Swaps are performed by updating the sweep line point and then inserting s1 ... s2.
-
-        Store a bool 'before in every line entry that signifies if the x-value is just before or after the
-        event point.
-
-        Every time a linear segment is flipped against a collinear neighbor, those two segments must track how
-        many times they've been flipped. If the number is odd, they should reverse their below() relationship,
-        otherwise not.
-
-        This means that every time a pencil of n segments is flipped, O(n2) collinearity checks must be made?
-
-        // Alternative algorithm: Store all source and target events and use a sweep line. Keep track of which
-        // events are currently active on the line at all times, and check every new segment against all active segments
-        // to find new intersections. O(n2) in worst case, but generally behaves better.
- */
-
-
-
 
 /**
   * A vertical line that moves from left to right and sorts its intersecting segments according to the
@@ -37,15 +17,26 @@ import scala.collection.mutable.ArrayBuffer
   * @param data BST storing the lines.
   * @param entries Store each line entry using the id of the original segment. Used for segment-to-entry lookup.
   */
-class SweepLine[L <: Line] private (currentX: Double, data: RBTree[LineEntry[L]], entries: Vector[LineEntry[L]], ord: Ordering[LineEntry[L]]) {
+class SweepLine[L <: Line] private (currentX: Rational, data: RBTree[LineEntry[L]], entries: Vector[LineEntry[L]], ord: Ordering[LineEntry[L]]) {
   private val neighborLookup = new NeighbourLookup(data, entries)(ord)
+
+  /**
+    * @param s1 A segment on the sweep line.
+    * @param s2 A segment different from s1 on the sweep line.
+    * @return True if s1 is below s2, otherwise false.
+    */
+  def orderedBelow(s1: Segment[L], s2: Segment[L]): Boolean = {
+    assert(s1 != s2, s"Attempted to check below-status on segment $s1 with itself.")
+    assert(contains(s1) && contains(s2), s"Attempted to check sweep line ordering for two segments, but both weren't present on the line: $s1, $s2")
+    entries(s1.id).<(entries(s2.id))(ord)
+  }
 
   /**
     * @param p The coordinate that the segment should use when comparing to other segments.
     * @param segments Segments to insert.
     * @return A copy of the sweep line with the segment inserted.
     */
-  def insert(p: DPoint, segments: Segment[L]*): SweepLine[L] = {
+  def insert(p: RPoint, segments: Segment[L]*): SweepLine[L] = {
     var current = this
     for (s <- segments) {
       require(!contains(s), "Cannot insert a segment on the sweep line that already exists on it")
@@ -69,7 +60,7 @@ class SweepLine[L <: Line] private (currentX: Double, data: RBTree[LineEntry[L]]
     * @param pencil A number of segments intersecting at p.
     * @return A copy of this sweep line with the segments having swapped place.
     */
-  def swap(p: DPoint, pencil: Segment[L]*): SweepLine[L] = {
+  def swap(p: RPoint, pencil: Segment[L]*): SweepLine[L] = {
     require(pencil.nonEmpty, "Attempted to swap empty pencil.")
     var line = this
     for (seg <- pencil)
@@ -100,24 +91,12 @@ class SweepLine[L <: Line] private (currentX: Double, data: RBTree[LineEntry[L]]
 
   /**
     * @param segment A segment intersecting the sweep line.
-    * @return The neighbors (above, below) the specified segment, or None if this segment is the top- or bottommost
-    *         entry on the sweep line.
-    */
-  def aboveAndBelow(segment: Segment[L],
-                    belowValid: Segment[L] => Boolean = defaultValidation,
-                    aboveValid: Segment[L] => Boolean = defaultValidation): (Option[Segment[L]], Option[Segment[L]]) = {
-    requireContains(segment)
-    neighborLookup.aboveAndBelow(segment, belowValid, aboveValid)
-  }
-
-  /**
-    * @param segment A segment intersecting the sweep line.
     * @param isValid If the closest neighbor above the segment isn't valid, the second closest will be processed etc. until
     *                a valid segment is found.
     * @return The neighbor above the specified segment, or None if this segment is the topmost entry on the sweep line.
     */
   def above(segment: Segment[L], isValid: Segment[L] => Boolean = defaultValidation): Option[Segment[L]] =
-    neighborLookup.aboveAndBelow(segment, defaultValidation, isValid)._1
+    neighborLookup.above(segment, isValid)
 
   /**
     * @param segment A segment intersecting the sweep line.
@@ -127,7 +106,7 @@ class SweepLine[L <: Line] private (currentX: Double, data: RBTree[LineEntry[L]]
     *         line.
     */
   def below(segment: Segment[L], isValid: Segment[L] => Boolean = defaultValidation): Option[Segment[L]] =
-    neighborLookup.aboveAndBelow(segment, isValid, defaultValidation)._2
+    neighborLookup.below(segment, isValid)
 
   /**
     * @param segment A segment s on the sweep line.
@@ -175,26 +154,12 @@ class SweepLine[L <: Line] private (currentX: Double, data: RBTree[LineEntry[L]]
     result.toVector
   }
 
-  private def closestCollinearSegment(s: Segment[L], upper: Boolean): Option[Segment[L]] = {
-    implicit val o = ord
-    val segments = this.allCollinearSegments(s)
-    if (segments.isEmpty)
-      None
-    else {
-      var closest:  Segment[L] = null
-      for (c <- segments if closest == null || (!c.overlaps(s) && (if (upper) entries(c.id) < entries(closest.id) else entries(c.id) > entries(closest.id))))
-        closest = c
-
-      Some(closest)
-    }
-  }
-
   /**
     * @param p The coordinate that the segment should use when comparing to other segments.
     * @param segment Segment to insert.
     * @return A copy of the sweep line with the segment inserted.
     */
-  private def insertSegment(p: DPoint, segment: Segment[L], before: Boolean): SweepLine[L] = {
+  private def insertSegment(p: RPoint, segment: Segment[L], before: Boolean): SweepLine[L] = {
     require(p.x >= currentX, "Cannot insert segment behind the sweep line")
     require(p.x >= segment.source.x && p.x <= segment.target.x, "The x-coordinate " + p.x + " is not present on segment " + segment)
     val newEntry = LineEntry[L](p, segment, before)
@@ -238,7 +203,7 @@ object SweepLine {
     * @param before True if the sweep line lies on the "left" side of the x-coordinate in this entry, false if on the
     *               right side. Used to determine above-below status for swapped segments.
     */
-  case class LineEntry[L <: Line](p: DPoint, segment: Segment[L], before: Boolean = true) {
+  case class LineEntry[L <: Line](p: RPoint, segment: Segment[L], before: Boolean = true) {
     def x = p.x
     def y = p.y
 
@@ -251,7 +216,7 @@ object SweepLine {
   def buildOrdering[L <: Line] = {
     Ordering.comparatorToOrdering(new Comparator[LineEntry[L]]() {
       override def compare(o1: LineEntry[L], o2: LineEntry[L]): Int = {
-        val x = Math.max(o1.x, o2.x)
+        val x = o1.x.max(o2.x)
 
         val result = if (o1.segment.below(x, o2.segment)) -1
         else if (o2.segment.below(x, o1.segment)) 1
@@ -275,7 +240,7 @@ object SweepLine {
          * collinear segments overlapping.
          */
         def reverse(result: Int) = result * -1
-        def y(l: LineEntry[L]): (Double, Double) = {
+        def y(l: LineEntry[L]): (Rational, Rational) = {
           if (l.segment.isVertical)
             (l.segment.source.y, l.segment.target.y)
           else {
@@ -327,7 +292,7 @@ object SweepLine {
     })
   }
 
-  def apply[L <: Line](start: Point, segmentAmount: Int): SweepLine[L] = {
+  def apply[L <: Line](start: RPoint, segmentAmount: Int): SweepLine[L] = {
     val entries = Vector.fill[LineEntry[L]](segmentAmount)(null)
     val ordering = buildOrdering[L]
     new SweepLine(start.x, RBTree.empty[LineEntry[L]], entries, ordering)

@@ -5,10 +5,8 @@ package net.cyndeline.rlcommon.math.geom
   *
   * @tparam P Type of class extending this trait.
   * @tparam T Data type used to store coordinates.
-  * @tparam IP Point class that uses Integers.
-  * @tparam ID Point class that uses Integers.
   */
-trait PointInterface[P <: PointInterface[P, T, IP, ID], T, IP, ID] {
+trait PointInterface[P <: PointInterface[P, T], T] {
 
   def x: T
   def y: T
@@ -27,10 +25,7 @@ trait PointInterface[P <: PointInterface[P, T, IP, ID], T, IP, ID] {
   def *(s: T): P
   def *(p: P): P
 
-  def crossProduct(p: P): Double
+  def crossProduct(p: P): T
   def distanceTo(p: P): Double
-
-  def toInt: IP
-  def toDouble: ID
 
 }

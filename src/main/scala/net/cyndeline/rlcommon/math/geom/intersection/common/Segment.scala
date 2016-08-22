@@ -1,6 +1,7 @@
-package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
+package net.cyndeline.rlcommon.math.geom.intersection.common
 
-import net.cyndeline.rlcommon.math.geom.{DPoint, Line, Point}
+import net.cyndeline.rlcommon.math.geom.{Line, Point, RPoint}
+import spire.math.Rational
 
 /**
   * A line segment between two points.
@@ -24,7 +25,7 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(Segment.comp
     * @param other Another segment.
     * @return True if this segment is below the other segment at x, otherwise false.
     */
-  def below(x: Double, other: Segment[L]): Boolean = {
+  def below(x: Rational, other: Segment[L]): Boolean = {
     require(x >= this.source.x && x <= this.target.x, s"Attempted to compare below-status for segment $this using x-value $x")
     require(x >= other.source.x && x <= other.target.x, s"Attempted to compare below-status for segment $other using x-value $x")
 
@@ -43,8 +44,8 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(Segment.comp
     val otherY = other.y(x)
 
     thisY < otherY || (thisY == otherY && {
-      val pIsThisSource = DPoint(x, thisY) == source.toDouble
-      val pIsOtherSource = DPoint(x, otherY) == other.source.toDouble
+      val pIsThisSource = RPoint(x, thisY) == source
+      val pIsOtherSource = RPoint(x, otherY) == other.source
 
       if (this.slope > other.slope && (pIsThisSource || pIsOtherSource)) {
         true
@@ -125,11 +126,11 @@ object Segment {
   def apply(id: Int, source: (Int, Int), target: (Int, Int)): Segment[Line] = new Segment(id, Line(source, target))
   def apply(id: Int, source: Point, target: Point): Segment[Line] = new Segment(id, Line(source, target))
 
-  def computeSource(l: Line): Point = if (l.start.x < l.stop.x ||
+  def computeSource(l: Line): RPoint = if (l.start.x < l.stop.x ||
     (l.start.x == l.stop.x && l.start.y < l.stop.y))
     l.start
   else
     l.stop
 
-  def computeTarget(l: Line, source: Point): Point = if (l.start != source) l.start else l.stop
+  def computeTarget(l: Line, source: RPoint): RPoint = if (l.start != source) l.start else l.stop
 }

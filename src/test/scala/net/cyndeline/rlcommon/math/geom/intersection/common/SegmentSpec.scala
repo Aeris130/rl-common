@@ -1,4 +1,4 @@
-package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
+package net.cyndeline.rlcommon.math.geom.intersection.common
 
 import net.cyndeline.rlcommon.SpecImports
 import net.cyndeline.rlcommon.math.geom.{Line, Point}

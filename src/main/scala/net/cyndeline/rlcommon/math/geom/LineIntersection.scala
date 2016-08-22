@@ -1,17 +1,19 @@
 package net.cyndeline.rlcommon.math.geom
 
+import net.cyndeline.rlcommon.util.UnorderedPair
+
 /**
   * Represents a single intersection point or an overlapping interval between two line segments.
   */
-class LineIntersection private (p: Option[DPoint], segment: Option[(Point, Point)]) {
+class LineIntersection private (p: Option[RPoint], segment: Option[(RPoint, RPoint)]) {
   def isSinglePoint: Boolean = p.isDefined
   def isInterval: Boolean = segment.isDefined
 
-  def pointIntersection: DPoint = {
+  def pointIntersection: RPoint = {
     assert(isSinglePoint, "Cannot retrieve a single point intersection from an interval.")
     p.get
   }
-  def overlap: (Point, Point) = {
+  def overlap: (RPoint, RPoint) = {
     assert(isInterval, "Cannot retrieve an interval overlap from a single point intersection.")
     segment.get
   }
@@ -31,7 +33,7 @@ class LineIntersection private (p: Option[DPoint], segment: Option[(Point, Point
     case li: LineIntersection => if (isSinglePoint) {
       li.isSinglePoint && li.pointIntersection == pointIntersection
     } else {
-      li.isInterval && li.overlap == overlap
+      li.isInterval && (li.overlap == overlap || (li.overlap._1 == overlap._2 && li.overlap._2 == overlap._1))
     }
     case _ => false
   }
@@ -42,6 +44,6 @@ class LineIntersection private (p: Option[DPoint], segment: Option[(Point, Point
 
 /** Factory object. */
 object LineIntersection {
-  def apply(p: DPoint): LineIntersection = new LineIntersection(Some(p), None)
-  def apply(start: Point, stop: Point): LineIntersection = new LineIntersection(None, Some((start, stop)))
+  def apply(p: RPoint): LineIntersection = new LineIntersection(Some(p), None)
+  def apply(start: RPoint, stop: RPoint): LineIntersection = new LineIntersection(None, Some((start, stop)))
 }

@@ -7,7 +7,7 @@ package net.cyndeline.rlcommon.math.geom
  * @param x The x dimension on the grid.
  * @param y The y dimension on the grid.
  */
-class Point(val x: Int, val y: Int) extends PointInterface[Point, Int, Point, DPoint] {
+class Point(val x: Int, val y: Int) extends PointInterface[Point, Int] {
 
   /**
    * @param t A tuple containing the x and y coordinate the create a new point from.
@@ -32,11 +32,8 @@ class Point(val x: Int, val y: Int) extends PointInterface[Point, Int, Point, DP
   override def *(s: Int): Point = this * (s, s)
   override def *(p: Point): Point = this * (p.x, p.y)
 
-  override def toDouble: DPoint = DPoint(this)
-  override def toInt: Point = this
-
-  override def crossProduct(p: Point): Double = toDouble.crossProduct(p.toDouble)
-  override def distanceTo(p: Point): Double = toDouble.distanceTo(p.toDouble)
+  override def crossProduct(p: Point): Int = DPoint(this).crossProduct(DPoint(p)).toInt
+  override def distanceTo(p: Point): Double = DPoint(this).distanceTo(DPoint(p))
 
   override def equals(other: Any): Boolean = other match {
     case p: Point => x == p.x && y == p.y

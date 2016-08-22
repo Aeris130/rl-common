@@ -11,6 +11,9 @@ object RlcommonBuild extends Build {
 
     libraryDependencies ++= Seq(
 
+      // Rational class, https://github.com/non/spire
+      "org.spire-math" %% "spire" % "0.11.0",
+
       // Tests
 
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "test",

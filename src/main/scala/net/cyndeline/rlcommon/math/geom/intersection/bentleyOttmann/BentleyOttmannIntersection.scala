@@ -2,8 +2,8 @@ package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
 
 import java.util.Comparator
 
-import net.cyndeline.rlcommon.math.geom.{DPoint, Line, LineIntersection, Point}
-import net.cyndeline.rlcommon.util.UnorderedPair
+import net.cyndeline.rlcommon.math.geom._
+import net.cyndeline.rlcommon.math.geom.intersection.common._
 
 import scala.collection.mutable
 
@@ -35,27 +35,29 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
     if (segments.isEmpty)
       return Vector()
 
-    var queue: EventQueue[L] = initialEvents(segments)
+    var queue: EventQueue[L] = EventQueue.fromSegments(segments)
     val lowestStart = segments.flatMap(s => List(s.start, s.stop)).minBy(_.x)
     var sweepLine = SweepLine[L](lowestStart, segments.size).insert(lowestStart)
 
     var intersectionStorage = new IntersectionStorage[L]()
 
     // Final intersections to report when the algorithm terminates, not inserted in the event queue.
-    val finalIntersections = new mutable.HashMap[DPoint, Vector[Segment[L]]]
+    val finalIntersections = new mutable.HashMap[RPoint, Vector[Segment[L]]]
 
-    def addToFinalIntersections(p: DPoint, s: Vector[Segment[L]]): Unit = {
+    def addToFinalIntersections(p: RPoint, s: Vector[Segment[L]]): Unit = {
       assert(!finalIntersections.contains(p), s"Attempted to insert segments to an intersection point $p multiple times.")
       finalIntersections += p -> s
+
+      if (s.exists(_.isSingleCoordinate))
+        intersectionStorage = intersectionStorage.addOverlaps(p, p, s.toSet)
     }
 
     /* Source case algorithm */
-    def sourceCase(event: SegmentPoint[L], previousIntersection: DPoint): Unit = {
+    def sourceCase(event: SegmentPoint[L], previousIntersection: RPoint): Unit = {
       val segment = event.segment
       sweepLine = sweepLine.insert(segment.source, segment)
-      val neighbors = sweepLine.aboveAndBelow(segment)
-      val s1 = neighbors._1 // Above
-      val s2 = neighbors._2 // Below
+      val s1 = sweepLine.above(segment)
+      val s2 = sweepLine.below(segment)
 
       if (s1.isDefined) {
         if (s1.get.containsPoint(event.p) && segment.collinearWith(s1.get)) {
@@ -117,7 +119,7 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
         val intersection = segment.intersection(neighbor.get)
         if (intersection.isDefined && intersection.get.isSinglePoint) {
           val neighbors = sweepLine.allCollinearSegments(neighbor.get)
-          for (n <- neighbors if n != segment)
+          for (n <- neighbors if n != segment && n.intersects(segment))
             if (upper)
               intersectionStorage = intersectionStorage.addIntervalAsPoint(intersection.get.pointIntersection, n, segment)
             else
@@ -139,35 +141,40 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
     /* Subset of the Source case, used when one or more segments run collinear to s. Handles both cases where the
      * collinear segments have the same source as s, and when they begin before s.
      */
-    def collinearityCase(s: Segment[L], s2: Option[Segment[L]], previousIntersection: DPoint): Unit = {
+    def collinearityCase(s: Segment[L], s2: Option[Segment[L]], previousIntersection: RPoint): Unit = {
       val lowestNonCollinearAbove = sweepLine.closestNonCollinearAbove(s)
 
       if (lowestNonCollinearAbove.isDefined)
         intersectionStorage = intersectionStorage.add(previousIntersection, lowestNonCollinearAbove.get, s)
 
       if (s2.isDefined)
-        intersectionStorage = intersectionStorage.add(previousIntersection, s2.get, s)
+        intersectionStorage = intersectionStorage.add(previousIntersection, s, s2.get)
     }
 
     /* Target case algorithm */
-    def targetCase(event: SegmentPoint[L], previousIntersection: DPoint): Unit = {
+    def targetCase(event: SegmentPoint[L], previousIntersection: RPoint): Unit = {
       val segment = event.segment
       val targetP = segment.target
-      val neighbors = sweepLine.aboveAndBelow(segment)
+      val aboveNeighbor = sweepLine.above(segment)
+      val belowNeighbor = sweepLine.below(segment)
 
-      if (neighbors._1.isDefined && neighbors._2.isDefined) {
-        val s1 = neighbors._1.get
-        val s2 = neighbors._2.get
+      if (aboveNeighbor.isDefined && belowNeighbor.isDefined) {
+        val s1 = aboveNeighbor.get
+        val s2 = belowNeighbor.get
 
-        if (!segment.collinearWith(s1) && !segment.collinearWith(s2)) {
+        if (!segment.collinearWith(s1) || !segment.collinearWith(s2)) {
           val s1s2Intersection = s1.intersection(s2)
           if (s1s2Intersection.isDefined) {
             val i = s1s2Intersection.get
 
             if (i.isSinglePoint) {
-              val p = i.pointIntersection.toInt
+              val p = i.pointIntersection
               if (EventPoint.coordinateLessThan(targetP, p)) {
                 intersectionStorage = intersectionStorage.add(previousIntersection, s1, s2, false)
+
+                addCollinearPoints(s1, s2)
+                addCollinearPoints(s2, s1)
+
               }
             } else {
               // Overlaps doesn't need to check if they're beyond p, since no intersection event is added
@@ -176,10 +183,15 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
 
           }
 
-        } else {
-          addAllCollinearOverlaps(segment)
         }
-      } else if (neighbors._1.isDefined || neighbors._2.isDefined) {
+
+        /* Note: The algorithm description puts this as an else-clause, but this results in overlaps not being found
+         * if the target segment has both a non-collinear neighbor s1 or s2, as well as collinear overlapping
+         * segments to add.
+         */
+        addAllCollinearOverlaps(segment)
+
+      } else if (aboveNeighbor.isDefined || belowNeighbor.isDefined) {
 
         /*
          * This part is not included in the original algorithm description, but is needed to detect overlap between
@@ -188,7 +200,7 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
          * occurs, causing that segment to now be the topmost segment.
          */
 
-        val neighbor = if (neighbors._1.isDefined) neighbors._1.get else neighbors._2.get
+        val neighbor = if (aboveNeighbor.isDefined) aboveNeighbor.get else belowNeighbor.get
         if (segment.collinearWith(neighbor)) {
           addAllCollinearOverlaps(segment)
         }
@@ -209,6 +221,19 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
         }
       }
 
+      // Adds all point intersections between s's collinear neighbors and some neighbor n.
+      def addCollinearPoints(s: Segment[L], n: Segment[L]): Unit = {
+        for (cSegment <- sweepLine.allCollinearSegments(s)) {
+          val intersection = cSegment.intersection(n)
+
+          if (intersection.isDefined && intersection.get.isSinglePoint) {
+            val upper = if (sweepLine.orderedBelow(cSegment, n)) n else cSegment
+            val below = if (upper == n) cSegment else n
+            intersectionStorage = intersectionStorage.add(previousIntersection, upper, below, false)
+          }
+        }
+      }
+
       /* This part isn't specified in the algorithm description, but rather the elimination-description of the
        * sweep line. Whenever a target event is reached, the segment must be removed from the sweep line.
        */
@@ -216,37 +241,67 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
     }
 
     /* Intersection case algorithm */
-    def intersectionCase(event: Intersection[L], previousIntersection: DPoint): Unit = {
+    def intersectionCase(event: Intersection[L], previousIntersection: RPoint): Unit = {
       val u = event.upper
       val v = event.lower
 
-      // Look for the closest non-intersecting neighbors above u and below v.
-      def nonIntersecting(a: Segment[L], b: Segment[L]): Boolean = {
-        val i = a.intersection(b)
-
-        /* Algorithm description is a bit iffy on whether to not treat overlaps as intersections, but there doesn't seem
-         * to be any other way to make multiple collinear segments detect a common intersecting segment.
-         */
-        i.isEmpty || i.get.isInterval
-      }
-      val topNeighbor = sweepLine.above(u, (s: Segment[L]) => nonIntersecting(s, u))
-      val bottomNeighbor = sweepLine.below(v, (s: Segment[L]) => nonIntersecting(s, v))
+      // Look for the closest non-intersecting (i.e not part of the pencil) neighbors above u and below v.
+      val pencilSet = event.allSegments.toSet
+      val topNeighbor = sweepLine.above(u, (s: Segment[L]) => !pencilSet.contains(s))
+      val bottomNeighbor = sweepLine.below(v, (s: Segment[L]) => !pencilSet.contains(s))
       val pencil = event.allSegments
 
       addToFinalIntersections(event.coordinate, pencil)
       sweepLine = sweepLine.swap(event.coordinate, pencil:_*)
 
-      if (bottomNeighbor.isDefined)
+      /* On top of adding any eventual intersections between the upper/lower neighbor and the new (due to the swap)
+       * upper/lower segments in the pencil around p, any segment collinear with these segments also has to have their
+       * intersections updated.
+       */
+      def collinearInPencil(s: Segment[L]): Vector[Segment[L]] = pencil.filter(p => p != s && s.collinearWith(p))
+
+      def collinearWithNeighbor(s: Segment[L], top: Boolean) = {
+        val n = if (top) topNeighbor else bottomNeighbor
+
+        if (n.isEmpty) {
+          Vector()
+        } else {
+          sweepLine.allCollinearSegments(n.get).filter(_.intersects(s))
+        }
+      }
+
+      if (bottomNeighbor.isDefined) {
         intersectionStorage = intersectionStorage.add(event.coordinate, u, bottomNeighbor.get)
 
-      if (topNeighbor.isDefined)
+        for (cs <- collinearInPencil(u))
+          intersectionStorage = intersectionStorage.add(event.coordinate, cs, bottomNeighbor.get)
+
+        for (cs <- collinearWithNeighbor(u, false))
+          if (sweepLine.orderedBelow(cs, u))
+            intersectionStorage = intersectionStorage.add(event.coordinate, u, cs)
+          else
+            intersectionStorage = intersectionStorage.add(event.coordinate, cs, u)
+      }
+
+      if (topNeighbor.isDefined) {
         intersectionStorage = intersectionStorage.add(event.coordinate, topNeighbor.get, v)
+
+        for (cs <- collinearInPencil(v))
+          intersectionStorage = intersectionStorage.add(event.coordinate, topNeighbor.get, cs)
+
+        for (cs <- collinearWithNeighbor(v, true))
+          if (sweepLine.orderedBelow(cs, v))
+            intersectionStorage = intersectionStorage.add(event.coordinate, v, cs)
+          else
+            intersectionStorage = intersectionStorage.add(event.coordinate, cs, v)
+      }
+
     }
 
     /*
      * Main algorithm
      */
-    var previousIntersection: DPoint = null
+    var previousIntersection: RPoint = null
     while (queue.nonEmpty) {
       val next: (EventPoint[L], EventQueue[L]) = queue.poll
       val event: EventPoint[L] = next._1
@@ -275,7 +330,7 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
       }
 
       /* Update the queue with new intersections. */
-      for (i <- intersectionStorage.pointIntersections /* lineIntersections ++ pointIntervalIntersections */) {
+      for (i <- intersectionStorage.pointIntersections) {
         val p = i._1
         val segAbove = i._2
         val segBelow = i._3
@@ -298,50 +353,26 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
         kv._2.distinct.filterNot(_.isSingleCoordinate)
     })).toVector.filterNot(kv => kv._2.isEmpty)
 
-    val overlapIntervals = intersectionStorage.allOverlaps
+    val overlapIntervals = intersectionStorage.allOverlaps.map(kv => kv._1 -> kv._2.toVector)
 
     /* Map each segment back to its original user-supplied line, in case the user extends the line class with
      * unique identifiers.
      */
-    (pointIntersections ++ overlapIntervals).map(kv => (kv._1, kv._2.map(_.original)))
+    (pointIntersections ++ overlapIntervals).map(kv => (kv._1, kv._2.sortBy(_.id).map(_.original)))
   }
-
-  private def initialEvents[L <: Line](seg: Vector[L]): EventQueue[L] = {
-    var id = 0
-    var queue = new EventQueue[L]()(BentleyOttmannIntersection.eventOrdering[L])
-    for (s <- seg) {
-      val segment = new Segment(id, s)
-      id += 1
-      queue = queue.insert(SegmentPoint(segment.source, Source, segment))
-      queue = queue.insert(SegmentPoint(segment.target, Target, segment))
-    }
-    queue
-  }
-
-
 
 }
 
 object BentleyOttmannIntersection {
 
-  /** This is the ordering that determines an events position in the priority queue (based on the point it represents).
-    * A point 'A is greater than 'B if A's x coordinate is lower than B's. This is to make the sweep line move from
-    * the leftmost point towards the rightmost.
-    */
-  private def eventOrdering[L <: Line] = Ordering.comparatorToOrdering[EventPoint[L]](new Comparator[EventPoint[L]] {
-    override def compare(o1: EventPoint[L], o2: EventPoint[L]): Int = if (o1 before o2) 1
-    else if (o2 before o1) -1
-    else 0
-  })
-
   /**
-    * @return A Bentley Ottman algorithm that doesn't include single-point line segments into intersections, only
+    * @return A Bentley Ottmann algorithm that doesn't include single-point line segments into intersections, only
     *         collinear overlaps.
     */
   def withoutSinglePointIntersections: BentleyOttmannIntersection = new BentleyOttmannIntersection(false)
 
   /**
-    * @return A Bentley Ottman algorithm that includes single-point line segments into intersections and
+    * @return A Bentley Ottmann algorithm that includes single-point line segments into intersections and
     *         collinear overlaps.
     */
   def withSinglePointIntersections: BentleyOttmannIntersection = new BentleyOttmannIntersection(true)

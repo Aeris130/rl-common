@@ -1,16 +1,16 @@
-package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
+package net.cyndeline.rlcommon.math.geom.intersection.common
 
-import net.cyndeline.rlcommon.math.geom.{DPoint, Line, Point}
+import net.cyndeline.rlcommon.math.geom.{Line, Point, RPoint}
 
 /**
   * A single event in the event queue (the beginning or end of a segment, or the intersection of two or more segments).
   */
-abstract class EventPoint[L <: Line](point: DPoint, t: PointType) {
+abstract class EventPoint[L <: Line](point: RPoint, t: PointType) {
 
   def isSource: Boolean = t == Source
   def isTarget: Boolean = t == Target
   def isIntersection: Boolean = t == Intersect
-  def coordinate: DPoint = point
+  def coordinate: RPoint = point
 
   /**
     * Determines if this event should occur before another in the event queue by sorting based on coordinates (first
@@ -68,11 +68,11 @@ abstract class EventPoint[L <: Line](point: DPoint, t: PointType) {
 }
 
 object EventPoint {
-  def coordinateLessThan(a: DPoint, b: DPoint): Boolean = a.x < b.x || (a.x == b.x && a.y < b.y)
-  def coordinateLessThan(a: Point, b: Point): Boolean = coordinateLessThan(a.toDouble, b.toDouble)
+  def coordinateLessThan(a: RPoint, b: RPoint): Boolean = a.x < b.x || (a.x == b.x && a.y < b.y)
+  def coordinateLessThan(a: Point, b: Point): Boolean = coordinateLessThan(RPoint(a), RPoint(b))
 }
 
-case class SegmentPoint[L <: Line](p: Point, t: PointType, segment: Segment[L]) extends EventPoint[L](p, t)
+case class SegmentPoint[L <: Line](p: RPoint, t: PointType, segment: Segment[L]) extends EventPoint[L](p, t)
 
 /**
   * Note: The segments in-between are not sorted according to above/below status. Whenever an intersection with n
@@ -81,7 +81,7 @@ case class SegmentPoint[L <: Line](p: Point, t: PointType, segment: Segment[L]) 
   *
   * @param upper One ore more upper neighbors. Will contain multiple segments if they're all collinear.
   */
-case class Intersection[L <: Line](p: DPoint, upper: Segment[L], lower: Segment[L], inBetween: Set[Segment[L]]) extends EventPoint[L](p, Intersect) {
+case class Intersection[L <: Line](p: RPoint, upper: Segment[L], lower: Segment[L], inBetween: Set[Segment[L]]) extends EventPoint[L](p, Intersect) {
   def update(segment: Segment[L]): Intersection[L] = {
     if (upper == segment || lower == segment || inBetween.contains(segment)) {
       this

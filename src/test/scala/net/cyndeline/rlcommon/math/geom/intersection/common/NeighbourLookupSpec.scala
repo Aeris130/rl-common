@@ -1,9 +1,10 @@
-package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
+package net.cyndeline.rlcommon.math.geom.intersection.common
 
 import net.cyndeline.rlcommon.SpecImports
 import net.cyndeline.rlcommon.collections.RBTree
-import net.cyndeline.rlcommon.math.geom.{DPoint, Line, Point}
-import net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann.SweepLine.LineEntry
+import net.cyndeline.rlcommon.math.geom.intersection.common.SweepLine.LineEntry
+import net.cyndeline.rlcommon.math.geom.{Line, Point, RPoint}
+import spire.math.Rational
 
 class NeighbourLookupSpec extends SpecImports{
   private implicit val leOrdering = SweepLine.buildOrdering[Line]
@@ -22,7 +23,7 @@ class NeighbourLookupSpec extends SpecImports{
    * Since collinearity is supposed to be determined in each test, slopes are arbitrary.
    */
   private val specTree = new {
-    val defaultX = DPoint(1, 1)
+    val defaultX = RPoint(1, 1)
     val s1 = LineEntry(defaultX, Segment(1, (0, 30), (1, 1)))
     val s2 = LineEntry(defaultX, Segment(2, (0, 30), (1, 2)))
     val s3 = LineEntry(defaultX, Segment(3, (0, 30), (1, 3)))
@@ -93,11 +94,11 @@ class NeighbourLookupSpec extends SpecImports{
     it ("should find neighbors for a segment stored in a leaf node with a lower parent") {
 
       Given("a tree with entry s being the highest value in the left sub tree")
-      val x = DPoint(5, 5)
-      val sP = LineEntry(DPoint(3, 3), Segment(0, Point(3, 10), Point(10, 9)))
-      val s1 = LineEntry(DPoint(2, 2), Segment(1, Point(2, 8), Point(8, 6)))
+      val x = RPoint(5, 5)
+      val sP = LineEntry(RPoint(3, 3), Segment(0, Point(3, 10), Point(10, 9)))
+      val s1 = LineEntry(RPoint(2, 2), Segment(1, Point(2, 8), Point(8, 6)))
       val s = LineEntry(x, Segment(2, Point(5, 7), Point(9, 10)))
-      val s2 = LineEntry(DPoint(1, 1), Segment(3, Point(1, 5), Point(9, 4)))
+      val s2 = LineEntry(RPoint(1, 1), Segment(3, Point(1, 5), Point(9, 4)))
       val entries = Vector(sP, s1, s, s2) // Matches id's
       val tree = RBTree.build(s2, s1, sP, s)(SweepLine.buildOrdering[Line])
 
@@ -105,36 +106,60 @@ class NeighbourLookupSpec extends SpecImports{
       require(tree.value == s1 && tree.subTree(s).left.isEmpty && tree.subTree(s).right.isEmpty)
 
       When("computing neighbors for s")
-      val neighbors = new NeighbourLookup(tree, entries)(SweepLine.buildOrdering[Line]).aboveAndBelow(s.segment)
+      val lookup = new NeighbourLookup(tree, entries)(SweepLine.buildOrdering[Line])
+      val above = lookup.above(s.segment)
+      val below = lookup.below(s.segment)
 
       Then("s1 should be the upper neighbor")
-      neighbors._1 should be (Some(s1.segment))
+      above should be (Some(s1.segment))
 
       And("s2 should be the lower neighbor")
-      neighbors._2 should be (Some(s2.segment))
+      below should be (Some(s2.segment))
 
     }
 
     it ("should find neighbors for a segment stored in a leaf node with an upper parent") {
 
       Given("a tree with entry s1 being the lowest value in the right sub tree")
-      val s0 = LineEntry(DPoint(2, 2), Segment(0, Point(2, 10), Point(9, 8)))
-      val s1 = LineEntry(DPoint(2, 2), Segment(1, Point(2, 7), Point(9, 5)))
-      val s2 = LineEntry(DPoint(2, 2), Segment(2, Point(2, 4), Point(9, 2)))
-      val s3 = LineEntry(DPoint(2, 2), Segment(3, Point(2, 2), Point(9, 0)))
+      val s0 = LineEntry(RPoint(2, 2), Segment(0, Point(2, 10), Point(9, 8)))
+      val s1 = LineEntry(RPoint(2, 2), Segment(1, Point(2, 7), Point(9, 5)))
+      val s2 = LineEntry(RPoint(2, 2), Segment(2, Point(2, 4), Point(9, 2)))
+      val s3 = LineEntry(RPoint(2, 2), Segment(3, Point(2, 2), Point(9, 0)))
       val entries = Vector(s0, s1, s2, s3) // Matches id's
       val tree = RBTree.build(s3, s2, s0, s1)(SweepLine.buildOrdering[Line])
 
       require(tree.value == s2 && tree.subTree(s0).left.value == s1)
 
       When("computing neighbors for s1")
-      val neighbors = new NeighbourLookup(tree, entries)(SweepLine.buildOrdering[Line]).aboveAndBelow(s1.segment)
+      val lookup = new NeighbourLookup(tree, entries)(SweepLine.buildOrdering[Line])
+      val above = lookup.above(s1.segment)
+      val below = lookup.below(s1.segment)
 
       Then("s0 should be the upper neighbor")
-      neighbors._1 should be (Some(s0.segment))
+      above should be (Some(s0.segment))
 
       And("s2 should be the lower neighbor")
-      neighbors._2 should be (Some(s2.segment))
+      below should be (Some(s2.segment))
+
+    }
+
+    it ("should find a neighbor to the right of an invalid neighbor") {
+
+      Given("a tree with an invalid segment 3 as root, with the valid segment 2 to the right of 3")
+      val left = RPoint(Rational(24, 5), Rational(21, 5))
+      val s0 = LineEntry(left, Segment(0, Point(4, 5), Point(6, 3)), false)
+      val s1 = LineEntry(RPoint(5, 2), Segment(1, Point(5, 2), Point(6, 6)), false)
+      val s2 = LineEntry(left, Segment(2, Point(0, 0), Point(8, 7)), false)
+      val s3 = LineEntry(left, Segment(3, Point(2, 7), Point(8, 1)), false)
+      val entries = Vector(s0, s1, s2, s3) // Matches id's
+      val tree = RBTree.build(s2, s3, s1, s0)(SweepLine.buildOrdering[Line])
+      assert(tree.value == s3 && tree.right.value == s2 && tree.right.left.isEmpty && tree.right.right.isEmpty)
+
+      When("finding the upper neighbor of the segment to the left of 3")
+      val above = new NeighbourLookup(tree, entries)(SweepLine.buildOrdering[Line]).above(s0.segment, (s: Segment[Line]) => s == s2.segment)
+
+      Then("the upper neighbor should be 2")
+      above should be (Some(s2.segment))
 
     }
 
@@ -246,8 +271,8 @@ class NeighbourLookupSpec extends SpecImports{
     it ("should return a segment that is collinear with some segment s, occupies > 1 coordinate and only shares an endpoint") {
 
       Given("a segment s and a collinear segment v")
-      val s = LineEntry(DPoint(4, 4), Segment(0, (2, 2), (4, 4)))
-      val v = LineEntry(DPoint(4, 4), Segment(1, (4, 4), (6, 6)))
+      val s = LineEntry(RPoint(4, 4), Segment(0, (2, 2), (4, 4)))
+      val v = LineEntry(RPoint(4, 4), Segment(1, (4, 4), (6, 6)))
       val tree = RBTree.build(s, v)
       val lookup = new NeighbourLookup(tree, Vector(s, v))(SweepLine.buildOrdering[Line])
 
@@ -317,5 +342,5 @@ class NeighbourLookupSpec extends SpecImports{
   private def isCollinear(set: Set[Segment[Line]])(s1: Segment[Line], s2: Segment[Line]): Boolean = set.contains(s1) && set.contains(s2)
   private def isValid(set: Set[LineEntry[Line]])(s: Segment[Line]) = set.map(_.segment).contains(s)
   private def segmentSet(entries: LineEntry[Line]*) = entries.map(_.segment).toSet
-
+  private def defaultValidation(s: Segment[Line]) = true
 }

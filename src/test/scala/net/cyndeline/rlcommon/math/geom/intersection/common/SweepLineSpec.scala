@@ -1,15 +1,15 @@
-package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
+package net.cyndeline.rlcommon.math.geom.intersection.common
 
 import net.cyndeline.rlcommon.SpecImports
-import net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann.SweepLine.LineEntry
-import net.cyndeline.rlcommon.math.geom.{DPoint, Line, Point}
+import net.cyndeline.rlcommon.math.geom.intersection.common.SweepLine.LineEntry
+import net.cyndeline.rlcommon.math.geom.{Line, Point, RPoint}
 
 class SweepLineSpec extends SpecImports {
   private val ordering = SweepLine.buildOrdering[Line]
 
   private def threeSegments = new {
-    val lowest = Point(1, 8)
-    val l1 = Segment(0, Line(lowest, Point(9, 9))) // Top segment
+    val lowest = RPoint(1, 8)
+    val l1 = Segment(0, Line(lowest, RPoint(9, 9))) // Top segment
     val l2 = Segment(1, Line(Point(4, 6), Point(8, 5)))
     val l3 = Segment(2, Line(Point(2, 5), Point(7, 4))) // Bottom segment
 
@@ -22,8 +22,8 @@ class SweepLineSpec extends SpecImports {
    * checks, since neither segment has its source in (4,4).
    */
   private def verticalTarget(beforeFlip: Boolean = true) = new {
-    val l1 = LineEntry(DPoint(4, 2), Segment(1, Line(Point(2, 2), Point(4, 4))), beforeFlip)
-    val l2 = LineEntry(DPoint(4, 2), Segment(0, Line(Point(4, 2), Point(4, 7))), beforeFlip)
+    val l1 = LineEntry(RPoint(4, 2), Segment(1, Line(Point(2, 2), Point(4, 4))), beforeFlip)
+    val l2 = LineEntry(RPoint(4, 2), Segment(0, Line(Point(4, 2), Point(4, 7))), beforeFlip)
   }
 
   describe("SweepLine") {
@@ -63,10 +63,11 @@ class SweepLineSpec extends SpecImports {
       import f._
 
       When("retrieving neighbors for the middle segment")
-      val neighbors = line.aboveAndBelow(l2)
+      val above = line.above(l2)
+      val below = line.below(l2)
 
       Then("l1 and l3 should be found")
-      neighbors should be ((Some(l1), Some(l3)))
+      (above, below) should be ((Some(l1), Some(l3)))
 
     }
 
@@ -77,13 +78,14 @@ class SweepLineSpec extends SpecImports {
       import f._
 
       When("retrieving neighbors for the lower segment")
-      val neighbors = line.aboveAndBelow(l3)
+      val above = line.above(l3)
+      val below = line.below(l3)
 
       Then("the neighbor above should be l2")
-      neighbors._1 should be (Some(l2))
+      above should be (Some(l2))
 
       And("the neighbor below should be empty")
-      neighbors._2 should be ('empty)
+      below should be ('empty)
 
     }
 
@@ -94,13 +96,14 @@ class SweepLineSpec extends SpecImports {
       import f._
 
       When("retrieving neighbors for the upper segment")
-      val neighbors = line.aboveAndBelow(l1)
+      val above = line.above(l1)
+      val below = line.below(l1)
 
       Then("the neighbor below should be l2")
-      neighbors._2 should be (Some(l2))
+      below should be (Some(l2))
 
       And("the neighbor above should be empty")
-      neighbors._1 should be ('empty)
+      above should be ('empty)
 
     }
 
@@ -118,7 +121,7 @@ class SweepLineSpec extends SpecImports {
       assert(line.values == Seq(l3, l2, l1))
 
       When("swapping at (2,2)")
-      val swapped = line.swap(DPoint(2, 2), l2, l3, l1)
+      val swapped = line.swap(RPoint(2, 2), l2, l3, l1)
 
       Then("the segments should be ordered l1, l2, l3")
       assert(swapped.values == Seq(l1, l2, l3))
@@ -136,9 +139,9 @@ class SweepLineSpec extends SpecImports {
       assert(line.values == Seq(l3, l2, l1, v))
 
       When("swapping the intersection points (v,l1), (v,l2), (v,l3) in order")
-      val swap1 = line.swap(l1.start.toDouble, l1, v)
-      val swap2 = swap1.swap(l2.start.toDouble, l2, v)
-      val swap3 = swap2.swap(l3.start.toDouble, v, l3)
+      val swap1 = line.swap(l1.start, l1, v)
+      val swap2 = swap1.swap(l2.start, l2, v)
+      val swap3 = swap2.swap(l3.start, v, l3)
 
       Then("after the first swap, the vertical segment should lie between l2 and l1")
       assert(swap1.values == Seq(l3, l2, v, l1))
@@ -161,7 +164,7 @@ class SweepLineSpec extends SpecImports {
       assert(line.values == Seq(l3, l2, l1))
 
       When("swapping the segments at (2,2)")
-      val swapped = line.swap(DPoint(2,2), l2, l1, l3)
+      val swapped = line.swap(RPoint(2,2), l2, l1, l3)
 
       Then("the resulting line should store its segments in the reversed order")
       swapped.values should be (line.values.reverse)
@@ -178,7 +181,7 @@ class SweepLineSpec extends SpecImports {
       assert(line.values == Seq(l3, l2, l1))
 
       When("swapping the segments at (1,2)")
-      val swapped = line.swap(DPoint(1,2), l2, l1, l3)
+      val swapped = line.swap(RPoint(1,2), l2, l1, l3)
 
       Then("the resulting line should store its segments in the reversed order")
       swapped.values should be (line.values.reverse)
@@ -192,14 +195,14 @@ class SweepLineSpec extends SpecImports {
       val l2 = Segment(1, Line(Point(2, 1), Point(9, 1)))
       val l3 = Segment(2, Line(Point(2, 0), Point(2, 3)))
       val l4 = Segment(3, Line(Point(5, 0), Point(5, 3)))
-      val line = SweepLine(Point(1, 1), 4).insert(l1.source, l1).insert(l2.source, l2).insert(l3.source, l3)
+      val line = SweepLine(RPoint(1, 1), 4).insert(l1.source, l1).insert(l2.source, l2).insert(l3.source, l3)
       assert(line.values == Seq(l2, l1, l3))
 
       When("swapping l1+l2 and l3 and then l1+l2 and l4")
-      val swap1 = line.swap(DPoint(2, 1), l3, l2, l1)
+      val swap1 = line.swap(RPoint(2, 1), l3, l2, l1)
       val nextPoint = swap1.remove(l3).insert(l4.source, l4) // l3 and l4 can't be cut at the same time
       assert(nextPoint.values == Seq(l1, l2, l4))
-      val swap2 = nextPoint.swap(DPoint(5, 1), l4, l2, l1)
+      val swap2 = nextPoint.swap(RPoint(5, 1), l4, l2, l1)
 
       Then("the first swap should result in l3 being on top, and l1 and l2 changing places")
       swap1.values should be (line.values.reverse)
@@ -219,7 +222,7 @@ class SweepLineSpec extends SpecImports {
       assert(line.values == Seq(l2, l1, single))
 
       When("swapping the lines at (5,6)")
-      val swapped = line.swap(single.start.toDouble, single, l2, l1)
+      val swapped = line.swap(single.start, single, l2, l1)
 
       Then("the segments should reverse order")
       swapped.values should be (line.values.reverse)
@@ -270,8 +273,8 @@ class SweepLineSpec extends SpecImports {
     it ("should order two swapped segments according to their slopes if they intersect at a point where they haven't been swapped yet") {
 
       Given("a vertical segment l1 (3,2)->(3,4) that has been swapped at (3,2) and a horizontal segment l2 (1,4)->(3,4) that has been swapped at (1,4)")
-      val l1 = LineEntry(DPoint(3, 2), Segment(1, Line(Point(3, 2), Point(3, 4))), false)
-      val l2 = LineEntry(DPoint(1, 4), Segment(2, Line(Point(1, 4), Point(3, 4))), false)
+      val l1 = LineEntry(RPoint(3, 2), Segment(1, Line(Point(3, 2), Point(3, 4))), false)
+      val l2 = LineEntry(RPoint(1, 4), Segment(2, Line(Point(1, 4), Point(3, 4))), false)
 
       When("checking ordering status")
       val l1LessThan2 = ordering.lt(l1, l2)
@@ -286,8 +289,8 @@ class SweepLineSpec extends SpecImports {
     it ("should reverse the order according if a segment has its source inside another segment and both segments were swapped at the source") {
 
       Given("a segment l1 (1,0)->(1,3) being swapped at (1,2) with segment l2 (1,2)->(2,2)")
-      val l1 = LineEntry(DPoint(1, 2), Segment(1, Line(Point(1, 0), Point(1, 3))), false)
-      val l2 = LineEntry(DPoint(1, 2), Segment(2, Line(Point(1, 2), Point(2, 2))), false)
+      val l1 = LineEntry(RPoint(1, 2), Segment(1, Line(Point(1, 0), Point(1, 3))), false)
+      val l2 = LineEntry(RPoint(1, 2), Segment(2, Line(Point(1, 2), Point(2, 2))), false)
 
       When("checking ordering status")
       val l1LessThan2 = ordering.lt(l1, l2)
@@ -302,8 +305,8 @@ class SweepLineSpec extends SpecImports {
     it ("should reverse the order if one segments has its swapping point before the other") {
 
       Given("a segment l1 (1,0)->(1,3) being swapped at (1,2), and a segment l2 (1,1)->(2,1) swapped at (1,1)")
-      val l1 = LineEntry(DPoint(1, 2), Segment(1, Line(Point(1, 0), Point(1, 3))), false)
-      val l2 = LineEntry(DPoint(1, 1), Segment(2, Line(Point(1, 1), Point(2, 1))), false)
+      val l1 = LineEntry(RPoint(1, 2), Segment(1, Line(Point(1, 0), Point(1, 3))), false)
+      val l2 = LineEntry(RPoint(1, 1), Segment(2, Line(Point(1, 1), Point(2, 1))), false)
 
       When("checking ordering status")
       val l1LessThan2 = ordering.lt(l1, l2)
@@ -318,8 +321,8 @@ class SweepLineSpec extends SpecImports {
     it ("should not consider two collinear segments as swapped if one of them has been swapped at a point not present on the other") {
 
       Given("a segment (1,2)->(1,6) swapped at (1,2), and a segment (1,5)->(1,7)")
-      val l1 = LineEntry(DPoint(1, 2), Segment(1, Line(Point(1, 2), Point(1, 6))), false)
-      val l2 = LineEntry(DPoint(1, 5), Segment(2, Line(Point(1, 5), Point(1, 7))), true)
+      val l1 = LineEntry(RPoint(1, 2), Segment(1, Line(Point(1, 2), Point(1, 6))), false)
+      val l2 = LineEntry(RPoint(1, 5), Segment(2, Line(Point(1, 5), Point(1, 7))), true)
 
       When("checking ordering status")
       val l1LessThan2 = ordering.lt(l1, l2)
@@ -336,8 +339,8 @@ class SweepLineSpec extends SpecImports {
       Given("two segments (1,2)->(2,6), with one (l1) being before (1,2) and the other (l2) after (2,6)")
       val id1 = 1
       val id2 = 2
-      val l1 = LineEntry(DPoint(1, 2), Segment(id1, Line(Point(1, 2), Point(2, 6))), true)
-      val l2 = LineEntry(DPoint(2, 6), Segment(id2, Line(Point(1, 2), Point(2, 6))), false)
+      val l1 = LineEntry(RPoint(1, 2), Segment(id1, Line(Point(1, 2), Point(2, 6))), true)
+      val l2 = LineEntry(RPoint(2, 6), Segment(id2, Line(Point(1, 2), Point(2, 6))), false)
 
       When("checking ordering status")
       val l1LessThan2 = ordering.lt(l1, l2)
@@ -353,10 +356,10 @@ class SweepLineSpec extends SpecImports {
 
   private def sweepLine(segments: Segment[Line]*): SweepLine[Line] = {
     require(segments.nonEmpty, "Tried to instantiate empty sweep line")
-    val coordinates: Seq[Point] = segments.flatMap(s => Set(s.start, s.stop))
+    val coordinates: Seq[RPoint] = segments.flatMap(s => Set(s.start, s.stop))
     val minX = coordinates.minBy(_.x).x
     val minY = coordinates.minBy(_.y).x
-    var line = SweepLine[Line](Point(minX, minY), segments.size)
+    var line = SweepLine[Line](RPoint(minX, minY), segments.size)
     for (s <- segments)
       line = line.insert(s.start, s)
     line

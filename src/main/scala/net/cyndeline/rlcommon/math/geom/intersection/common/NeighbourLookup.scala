@@ -1,8 +1,8 @@
-package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
+package net.cyndeline.rlcommon.math.geom.intersection.common
 
 import net.cyndeline.rlcommon.collections.RBTree
 import net.cyndeline.rlcommon.math.geom.Line
-import net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann.SweepLine.LineEntry
+import net.cyndeline.rlcommon.math.geom.intersection.common.SweepLine.LineEntry
 
 /**
   * Helper methods for the sweep line.
@@ -10,70 +10,21 @@ import net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann.SweepLine.Li
 class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[LineEntry[L]])(implicit ord: Ordering[LineEntry[L]]) {
 
   /**
-    * @param segment A segment intersecting the sweep line.
-    * @return The neighbors (above, below) the specified segment, or None if this segment is the top- or bottommost
-    *         entry on the sweep line.
+    * @param segment A segment s intersecting the sweep line.
+    * @param aboveValid Function f that returns true if a segment is a valid result.
+    * @return The segment closest and above s that validates using f.
     */
-  def aboveAndBelow(segment: Segment[L],
-                    belowValid: Segment[L] => Boolean = defaultValidation,
-                    aboveValid: Segment[L] => Boolean = defaultValidation): (Option[Segment[L]], Option[Segment[L]]) = {
-    val entry = entries(segment.id)
-    findNeighbors(entry, null, null, data, belowValid, aboveValid)
+  def above(segment: Segment[L], aboveValid: Segment[L] => Boolean = defaultValidation): Option[Segment[L]] = {
+    findClosest(segment, true, aboveValid)
   }
 
   /**
-    * Recursively traverses the tree in order to find a segment and return the closest segment below and above it.
-    * If the segment lacks a left (right) child, then the parent is used as the lower (higher) neighbor if it occurs
-    * on the correct side of the segment in the tree.
-    *
-    * @param seg The segment to find neighbors for.
-    * @param previousHighestLower The highest entry that is lower than the sought segment. Null if no such entry
-    *                             was found while searching for the segment so far, or if no such entry was valid.
-    *                             I.e, this is the nearest neighbor (below) that should be used if no such neighbor
-    *                             exists in the target segments child sub-trees.
-    * @param previousLowestHigher Same as above, but the lowest higher neighbor (i.e the closest neighbor above).
-    * @param current The current root (may or may not be the segment to look for) to visit, child of 'previous.
-    * @param leftIsValid Keeps searching for neighbors below the segment on the sweep line until one is found that
-    *                    is validated by this function.
-    * @param rightIsValid Keeps searching for neighbors above the segment on the sweep line until one is found that
-    *                    is validated by this function.
+    * @param segment A segment s intersecting the sweep line.
+    * @param belowValid Function f that returns true if a segment is a valid result.
+    * @return The segment closest and below s that validates using f.
     */
-  private def findNeighbors(seg: LineEntry[L],
-                            previousHighestLower: LineEntry[L],
-                            previousLowestHigher: LineEntry[L],
-                            current: RBTree[LineEntry[L]],
-                            leftIsValid: Segment[L] => Boolean = defaultValidation,
-                            rightIsValid: Segment[L] => Boolean = defaultValidation): (Option[Segment[L]], Option[Segment[L]]) = {
-    if (current.isEmpty) {
-      (None, None)
-    } else if (current.value != seg) {
-      if (ord.lt(seg, current.value)) {
-        val newPreviousHigh = if (previousLowestHigher == null || ord.lt(current.value, previousLowestHigher)) current.value else previousLowestHigher
-        findNeighbors(seg, previousHighestLower, newPreviousHigh, current.left, leftIsValid, rightIsValid)
-      } else {
-        val newPreviousLow = if (previousHighestLower == null || ord.gt(current.value, previousHighestLower)) current.value else previousHighestLower
-        findNeighbors(seg, newPreviousLow, previousLowestHigher, current.right, leftIsValid, rightIsValid)
-      }
-
-    } else {
-
-      // Match found
-      val below = findClosestInSubtree(current, false, leftIsValid).getOrElse {
-        if (previousHighestLower != null && leftIsValid(previousHighestLower.segment))
-          previousHighestLower.segment
-        else
-          null
-      }
-
-      val above = findClosestInSubtree(current, true, rightIsValid).getOrElse {
-        if (previousLowestHigher != null && rightIsValid(previousLowestHigher.segment))
-          previousLowestHigher.segment
-        else
-          null
-      }
-
-      (Option(above), Option(below))
-    }
+  def below(segment: Segment[L], belowValid: Segment[L] => Boolean = defaultValidation): Option[Segment[L]] = {
+    findClosest(segment, false, belowValid)
   }
 
   /**
@@ -292,36 +243,6 @@ class NeighbourLookup[L <: Line](data: RBTree[LineEntry[L]], entries: Vector[Lin
     } else {
       None
     }
-  }
-
-  /**
-    * In-order traversal that finds the lowest/highest neighbor above/below a root.
-    * @param root The root (may not be empty).
-    * @param upper True if lowest neighbor above the root should be found, false if looking for the highest neighbor
-    *              below.
-    * @param isValid Function that returns true if a found segment is valid for return.
-    * @return The lowest value in the sub-tree starting at the right child, or None if the child is empty or if no
-    *         element was valid.
-    */
-  private def findClosestInSubtree(root: RBTree[LineEntry[L]], upper: Boolean, isValid: Segment[L] => Boolean): Option[Segment[L]] = {
-    require(!root.isEmpty, "Attempted to find the closest neighbor of an empty tree node.")
-    def upperChild(r: RBTree[LineEntry[L]]) = if (upper) r.right else r.left
-    def lowerChild(r: RBTree[LineEntry[L]]) = if (upper) r.left else r.right
-
-    def inOrder(n: RBTree[LineEntry[L]]): Option[Segment[L]] = if (n.isEmpty) {
-      None
-    } else {
-      val result = inOrder(lowerChild(n)).getOrElse {
-        if (isValid(n.value.segment))
-          n.value.segment
-        else
-          inOrder(upperChild(n)).orNull
-      }
-
-      Option(result)
-    }
-
-    inOrder(upperChild(root))
   }
 
   private def defaultValidation(s: Segment[L]) = true

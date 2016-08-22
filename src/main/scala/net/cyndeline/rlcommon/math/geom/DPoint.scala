@@ -5,7 +5,7 @@ import scala.language.implicitConversions
 /**
   * X/Y coordinates based on Double values.
   */
-class DPoint(val x: Double, val y: Double) extends PointInterface[DPoint, Double, Point, DPoint] {
+class DPoint(val x: Double, val y: Double) extends PointInterface[DPoint, Double] {
   private val epsilon = 1e-3
 
   override def asTuple = (x, y)
@@ -27,9 +27,6 @@ class DPoint(val x: Double, val y: Double) extends PointInterface[DPoint, Double
     val dy = y - p.y
     Math.sqrt(dx * dx + dy * dy)
   }
-
-  override def toInt: Point = Point(this)
-  override def toDouble: DPoint = this
 
   override def equals(other: Any): Boolean = other match {
     case dp: DPoint => Math.abs(x - dp.x) < epsilon && Math.abs(y - dp.y) < epsilon

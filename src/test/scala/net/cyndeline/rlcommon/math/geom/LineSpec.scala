@@ -1,6 +1,7 @@
 package net.cyndeline.rlcommon.math.geom
 
 import net.cyndeline.rlcommon.SpecImports
+import spire.math.Rational
 
 class LineSpec extends SpecImports {
 
@@ -92,6 +93,22 @@ class LineSpec extends SpecImports {
 
     }
 
+    it ("should not report single-point lines as collinear with lines they don't share coordinates with") {
+
+      Given("a line l1 and a single-point l2 outside of l1")
+      val line1 = line((0, 1), (7, 2))
+      val line2 = line((7, 0), (7, 0))
+
+      When("checking if the lines are collinear")
+      val collinear1 = line1.collinearWith(line2)
+      val collinear2 = line2.collinearWith(line1)
+
+      Then("the result should be false")
+      collinear1 should be (false)
+      collinear2 should be (false)
+
+    }
+
     /*
      *
      *  Line intersections
@@ -123,7 +140,7 @@ class LineSpec extends SpecImports {
 
       Then("the point (3,3) should be the intersection between the lines")
       intersection should be ('defined)
-      intersection.get.pointIntersection should be (DPoint(3, 3))
+      intersection.get.pointIntersection should be (RPoint(3, 3))
 
     }
 
@@ -139,7 +156,7 @@ class LineSpec extends SpecImports {
       Then("they should overlap at (2, 4)")
       intersection should be ('defined)
       intersection.get.isSinglePoint should be (true)
-      intersection.get.pointIntersection should be (DPoint(2, 4))
+      intersection.get.pointIntersection should be (RPoint(2, 4))
 
     }
 
@@ -159,7 +176,7 @@ class LineSpec extends SpecImports {
       intersection.get.isInterval should be (true)
 
       And("the interval should go from the lower point to the larger")
-      intersection.get.overlap should be ((Point(a), Point(b)))
+      intersection.get.overlap should be ((RPoint(a), RPoint(b)))
 
     }
 
@@ -271,6 +288,22 @@ class LineSpec extends SpecImports {
 
     }
 
+    it ("should detect overlap between partially overlapping segments with a slope when the segments goes in opposite directions") {
+
+      Given("two segments from (1,1) to (7,7) overlapping between (5,5) and (6,6), with the second going (7,7)->(5,5)")
+      val l1 = line((1, 1), (6, 6))
+      val l2 = line((7, 7), (5, 5))
+
+      When("checking if the superset overlaps the superset")
+      val intersection = l2 intersection l1
+
+      Then("the overlap should be (5,5) to (6,6)")
+      intersection should be ('defined)
+      intersection.get.isInterval should be (true)
+      intersection.get.overlap should be ((l2.stop, l1.stop))
+
+    }
+
     it ("should detect intersection between two segments when one segments source point lies within the other segment") {
 
       Given("two perpendicular segments intersecting at (4,9), the source of s1")
@@ -282,7 +315,7 @@ class LineSpec extends SpecImports {
       val s2IntersectsS1 = s2.intersection(s1)
 
       Then("the point (4,9) should be detected as an intersection")
-      s1IntersectsS2.get.pointIntersection should be (DPoint(4, 9))
+      s1IntersectsS2.get.pointIntersection should be (RPoint(4, 9))
       s2IntersectsS1 should equal (s1IntersectsS2)
 
     }
@@ -298,7 +331,7 @@ class LineSpec extends SpecImports {
       val s2IntersectsS1 = s2.intersection(s1)
 
       Then("the point (4,9) should be detected as an intersection")
-      s1IntersectsS2.get.pointIntersection should be (DPoint(4, 9))
+      s1IntersectsS2.get.pointIntersection should be (RPoint(4, 9))
       s2IntersectsS1 should equal (s1IntersectsS2)
 
     }
@@ -314,7 +347,7 @@ class LineSpec extends SpecImports {
       val s2IntersectsS1 = s2.intersection(s1)
 
       Then("the point (2,2) should be detected as an intersection")
-      s1IntersectsS2.get.overlap should be ((Point(2, 2), Point(2, 2)))
+      s1IntersectsS2.get.overlap should be ((RPoint(2, 2), RPoint(2, 2)))
       s2IntersectsS1 should equal (s1IntersectsS2)
 
     }
@@ -348,7 +381,25 @@ class LineSpec extends SpecImports {
       Then("a single-coordinate point at (4,4) between l1 and l2 should be found")
       val intersection = s1IntersectsS2.get
       intersection.isSinglePoint should be (true)
-      intersection.pointIntersection should be (DPoint(4, 4))
+      intersection.pointIntersection should be (RPoint(4, 4))
+      s2IntersectsS1.get should equal (s1IntersectsS2.get)
+
+    }
+
+    it ("should find intersections between lines triggering integer overflows") {
+
+      Given("two lines whose signed tri areas are too large to fit in ints")
+      val l1 = line((6186, 334), (7454, 6551))
+      val l2 = line((5555, 2363), (8287, 4084))
+
+      When("computing the intersections between the lines")
+      val s1IntersectsS2 = l1.intersection(l2)
+      val s2IntersectsS1 = l2.intersection(l1)
+
+      Then("an intersection should be found")
+      val intersection = s1IntersectsS2.get
+      intersection.isSinglePoint should be (true)
+      intersection.pointIntersection should be (RPoint(Rational(24993695387L, 3700654), Rational(46157679587L, 14802616)))
       s2IntersectsS1.get should equal (s1IntersectsS2.get)
 
     }
@@ -363,7 +414,7 @@ class LineSpec extends SpecImports {
 
       Given("a line (1,1) to (5,1) and a point (3,4)")
       val l = line((1, 1), (5, 1))
-      val point = DPoint(3, 4)
+      val point = RPoint(3, 4)
 
       When("checking if the line contains the point")
       val contains = l.containsPoint(point)
@@ -377,7 +428,7 @@ class LineSpec extends SpecImports {
 
       Given("a line (1,1) to (5,1) and a point (6,1)")
       val l = line((1, 1), (5, 1))
-      val point = DPoint(6, 1)
+      val point = RPoint(6, 1)
 
       When("checking if the line contains the point")
       val contains = l.containsPoint(point)
@@ -391,8 +442,8 @@ class LineSpec extends SpecImports {
 
       Given("a line (1,1) to (5,1) and two points (1,1) and (5,1)")
       val l = line((1, 1), (5, 1))
-      val point1 = DPoint(1, 1)
-      val point2 = DPoint(5, 1)
+      val point1 = RPoint(1, 1)
+      val point2 = RPoint(5, 1)
 
       When("checking if the line contains the point")
       val containsStart = l.containsPoint(point1)
@@ -408,7 +459,7 @@ class LineSpec extends SpecImports {
 
       Given("a line (0,0) to (4,4) and a point (3,3)")
       val l = line((0, 0), (4, 4))
-      val point = DPoint(3, 3)
+      val point = RPoint(3, 3)
 
       When("checking if the line contains the point")
       val contains = l.containsPoint(point)
@@ -422,7 +473,7 @@ class LineSpec extends SpecImports {
 
       Given("a single-point line and a point")
       val l = line((2, 2), (2, 2))
-      val point = DPoint(0, 3)
+      val point = RPoint(0, 3)
 
       When("checking if the line contains the point")
       val contains = l.containsPoint(point)
@@ -445,7 +496,7 @@ class LineSpec extends SpecImports {
       val split = line.split(4)
 
       Then("the splits should be (7,3), (6,4), (5,5), (4,6)")
-      split should be (Seq(DPoint(7, 3), DPoint(6, 4), DPoint(5, 5), DPoint(4, 6)))
+      split should be (Seq(RPoint(7, 3), RPoint(6, 4), RPoint(5, 5), RPoint(4, 6)))
 
     }
 
@@ -458,36 +509,36 @@ class LineSpec extends SpecImports {
       val split = line.split(3)
 
       Then("the splits should be (7,3), (5.5, 4.5), (4,6)")
-      split should be (Seq(DPoint(7, 3), DPoint(5.5, 4.5), DPoint(4, 6)))
+      split should be (Seq(RPoint(7, 3), RPoint(Rational(11, 2), Rational(9, 2)), RPoint(4, 6)))
 
     }
 
     it ("should 'split' a line into two parts") {
 
       Given("a line")
-      val start = Point(234, 99743)
-      val stop = Point(1334, 754)
+      val start = RPoint(234, 99743)
+      val stop = RPoint(1334, 754)
       val line = Line(start, stop)
 
       When("splitting the line into 2 parts")
       val split = line.split(2)
 
       Then("the splits should be start and stop")
-      split should be (Seq(start.toDouble, stop.toDouble))
+      split should be (Seq(start, stop))
 
     }
 
     it ("should split a single-point segment") {
 
       Given("a single-point line")
-      val p = Point(2, 2)
+      val p = RPoint(2, 2)
       val line = Line(p, p)
 
       When("splitting the line 4 times")
       val split = line.split(4)
 
       Then("only the lines start and stop coordinate should be returned")
-      split should be (Vector(p.toDouble))
+      split should be (Vector(p))
 
     }
 
@@ -506,8 +557,8 @@ class LineSpec extends SpecImports {
       val slope2 = l2.slope
 
       Then("both slopes should be 6 / 10")
-      slope1 should be (6.0 / 10)
-      slope2 should be (6.0 / 10)
+      slope1 should be (Rational(6, 10))
+      slope2 should be (Rational(6, 10))
 
     }
 

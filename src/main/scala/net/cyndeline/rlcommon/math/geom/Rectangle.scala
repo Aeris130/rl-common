@@ -8,8 +8,8 @@ class Rectangle (val start: Point, val width: Int, val height: Int) {
   val diagonal: Double = Math.sqrt((width * width) + (height * height))
   def stop: Point = start + (width - 1, height - 1)
 
-  def containsPoint(p: Point): Boolean = containsPoint(p.toDouble)
-  def containsPoint(p: DPoint): Boolean = {
+  def containsPoint(p: Point): Boolean = containsPoint(RPoint(p))
+  def containsPoint(p: RPoint): Boolean = {
     val stop = this.stop
     p.x >= start.x && p.x <= stop.x && p.y >= start.y && p.y <= stop.y
   }
