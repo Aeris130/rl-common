@@ -1,7 +1,8 @@
 package net.cyndeline.rlcommon.collections
 
-import net.cyndeline.rlcommon.math.geom.{Point, Rectangle}
+import net.cyndeline.rlcommon.math.geom.{Point, RPoint, Rectangle}
 import net.cyndeline.rlcommon.math.geom.spatialIndex.kdTree.KDTree
+import spire.math.Rational
 
 /**
   * Maps geometric shapes against user-defined objects and queries in O(n log n) time. Allows the user to query
@@ -151,9 +152,9 @@ object SpatialMultiMap {
     * @tparam E Value type in the map.
     * @return A map where the keys are 2D points in the cartesian plane, and ranges are represented as rectangles.
     */
-  def withPoint2D[E](updateCount: Int = 0): SpatialMultiMap[Point, E, Rectangle] = {
+  def withPoint2D[E](updateCount: Int = 0): SpatialMultiMap[RPoint, E, Rectangle] = {
     val updateAt = if (updateCount > 0) Some(updateCount) else None
-    new SpatialMultiMap(KDTree.point2DTree(Vector()), Map[Point, Set[E]](), 0, updateAt)
+    new SpatialMultiMap(KDTree.point2DTree(Vector()), Map[RPoint, Set[E]](), 0, updateAt)
   }
 
   /**

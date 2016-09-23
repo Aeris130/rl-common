@@ -32,7 +32,8 @@ abstract sealed class RBTree[+E] {
     * @param ordering Specifies lt/gt relations between tree values.
     * @return A copy of this tree with the specified value inserted, or this tree if the value was already in it.
     */
-  def insert[A >: E](value: A)(implicit ordering: Ordering[A]): RBTree[A] = {
+  def insert[A >: E](value: A, valueFactory: Option[ValueFactory[A]] = None)(implicit ordering: Ordering[A]): RBTree[A] = {
+    implicit val vf = valueFactory.getOrElse(ValueFactory.default[A])
     def add(tree: RBTree[A]): RBTree[A] = {
       if (tree.isEmpty)
         RBTree.build(value, Red)
@@ -54,7 +55,8 @@ abstract sealed class RBTree[+E] {
     * @return A copy of the tree with the node containing the specified value deleted, or this tree if no such
     *         value was found.
     */
-  def delete[A >: E](value: A)(implicit ordering: Ordering[A]): RBTree[A] = {
+  def delete[A >: E](value: A, valueFactory: Option[ValueFactory[A]] = None)(implicit ordering: Ordering[A]): RBTree[A] = {
+    implicit val vf = valueFactory.getOrElse(ValueFactory.default[A])
     def bubble(v: A, color: Color, left: RBTree[A], right: RBTree[A]): RBTree[A] = if (isBB(left) || isBB(right)) {
       balance(v, blacker(color), redder(left), redder(right))
     } else {
@@ -65,8 +67,8 @@ abstract sealed class RBTree[+E] {
       case empty @ (BLeaf | BBLeaf) => empty
       case Branch(_, Red, BLeaf, BLeaf) => BLeaf
       case Branch(_, Black, BLeaf, BLeaf) => BBLeaf
-      case Branch(_, Black, BLeaf, Branch(x, Red, l, r)) => Branch(x, Black, l, r)
-      case Branch(_, Black, Branch(x, Red, l, r), BLeaf) => Branch(x, Black, l, r)
+      case Branch(_, Black, BLeaf, Branch(x, Red, l, r)) => RBTree.build(x, Black, l, r)
+      case Branch(_, Black, Branch(x, Red, l, r), BLeaf) => RBTree.build(x, Black, l, r)
       case Branch(x, color, left, right) => bubble(left.max, color, removeMax(left), right)
     }
 
@@ -109,7 +111,7 @@ abstract sealed class RBTree[+E] {
     if (isEmpty) {
       throw new NoSuchElementException("No subtree for value " + value + " found.")
     } else {
-      if (value == this.value)
+      if (ordering.equiv(value, this.value))
         this
       else if (ordering.lt(value, this.value))
         left.subTree(value)
@@ -144,10 +146,10 @@ abstract sealed class RBTree[+E] {
   def contains[A >: E](e: A)(implicit ord: Ordering[A]): Boolean = if (isEmpty) {
     false
   } else {
-    value == e || (ord.lt(e, value) && left.contains(e)) || (ord.gt(e, value) && right.contains(e))
+    ord.equiv(value, e) || (ord.lt(e, value) && left.contains(e)) || (ord.gt(e, value) && right.contains(e))
   }
 
-  private def balance[A >: E : Ordering](v: A, color: Color, left: RBTree[A], right: RBTree[A]): RBTree[A] = (color, left, right) match {
+  private def balance[A >: E : Ordering](v: A, color: Color, left: RBTree[A], right: RBTree[A])(implicit vf: ValueFactory[A]): RBTree[A] = (color, left, right) match {
     /* The original 4 cases for Okasaki's insertion */
     // Left case
     case (Black, Branch(v1, Red, Branch(v2, Red, a, b), c), d) => RBTree.build(v1, Red, RBTree.build(v2, Black, a, b), RBTree.build(v, Black, c, d))
@@ -157,31 +159,31 @@ abstract sealed class RBTree[+E] {
     case (Black, a, Branch(v1, Red, b, Branch(v2, Red, c, d))) => RBTree.build(v1, Red, RBTree.build(v, Black, a, b), RBTree.build(v2, Black, c, d))
 
     /* 6 additional cases for M.Might's deletion */
-    case (DoubleBlack, Branch(y, Red, Branch(x, Red, a, b), c), d) => Branch(y, Black, Branch(x, Black, a, b), Branch(v, Black, c, d))
-    case (DoubleBlack, Branch(x, Red, a, Branch(y, Red, b, c)), d) => Branch(y, Black, Branch(x, Black, a, b), Branch(v, Black, c, d))
-    case (DoubleBlack, a, Branch(z, Red, Branch(y, Red, b, c), d)) => Branch(y, Black, Branch(v, Black, a, b), Branch(z, Black, c, d))
-    case (DoubleBlack, a, Branch(y, Red, b, Branch(z, Red, c, d))) => Branch(y, Black, Branch(v, Black, a, b), Branch(z, Black, c, d))
+    case (DoubleBlack, Branch(y, Red, Branch(x, Red, a, b), c), d) => RBTree.build(y, Black, RBTree.build(x, Black, a, b), RBTree.build(v, Black, c, d))
+    case (DoubleBlack, Branch(x, Red, a, Branch(y, Red, b, c)), d) => RBTree.build(y, Black, RBTree.build(x, Black, a, b), RBTree.build(v, Black, c, d))
+    case (DoubleBlack, a, Branch(z, Red, Branch(y, Red, b, c), d)) => RBTree.build(y, Black, RBTree.build(v, Black, a, b), RBTree.build(z, Black, c, d))
+    case (DoubleBlack, a, Branch(y, Red, b, Branch(z, Red, c, d))) => RBTree.build(y, Black, RBTree.build(v, Black, a, b), RBTree.build(z, Black, c, d))
 
       // For the last two, the input to redden can't be inferred by the compiler for some reason, thinks it's Any
     case (DoubleBlack, a, Branch(z, NegativeBlack, Branch(y, Black, b, c), d @ (Branch(_, Black, _, _)))) =>
       val dWithType: RBTree[A] = d
-      Branch(y, Black, Branch(v, Black, a, b), balance(z, Black, c, redden(dWithType)))
+      RBTree.build(y, Black, Branch(v, Black, a, b), balance(z, Black, c, redden(dWithType)))
     case (DoubleBlack, Branch(x, NegativeBlack, a @ Branch(_, Black, _, _), Branch(y, Black, b, c)), d) =>
       val aWithType: RBTree[A] = a
-      Branch(y, Black, balance(x, Black, redden(aWithType), b), Branch(v, Black, c, d))
+      RBTree.build(y, Black, balance(x, Black, redden(aWithType), b), Branch(v, Black, c, d))
 
     case _ => RBTree.build(v, color, left, right)
   }
 
-  private def blacken[A >: E : Ordering](t: RBTree[A]): RBTree[A] = t match {
+  private def blacken[A >: E : Ordering](t: RBTree[A])(implicit vf: ValueFactory[A]): RBTree[A] = t match {
     case BLeaf => BLeaf
     case BBLeaf => BLeaf
     case Branch(v, _, left, right) => RBTree.build(v, Black, left, right)
   }
 
-  private def redden[A >: E : Ordering](t: RBTree[A]): RBTree[A] = t match {
+  private def redden[A >: E : Ordering](t: RBTree[A])(implicit vf: ValueFactory[A]): RBTree[A] = t match {
     case BLeaf | BBLeaf => error("Cannot color an empty tree red")
-    case Branch(v, _, left, right) => Branch(v, Red, left, right)
+    case Branch(v, _, left, right) => RBTree.build(v, Red, left, right)
   }
 
   private def isBB(t: RBTree[_]): Boolean = t match {
@@ -203,9 +205,9 @@ abstract sealed class RBTree[+E] {
     case DoubleBlack => Black
   }
 
-  private def redder[A >: E : Ordering](t: RBTree[A]): RBTree[A] = t match {
+  private def redder[A >: E : Ordering](t: RBTree[A])(implicit vf: ValueFactory[A]): RBTree[A] = t match {
     case BBLeaf => BLeaf
-    case Branch(v, color, left, right) => Branch(v, redder(color), left, right)
+    case Branch(v, color, left, right) => RBTree.build(v, redder(color), left, right)
     case BLeaf => error("Unhandled case: Attempted to redden the color of a black leaf.")
   }
 
@@ -246,12 +248,12 @@ object RBTree {
     * Builds a tree node using specified node data, including its left and right sub-tree. Does not guarantee
     * a valid tree.
     */
-  private def build[E : Ordering](value: E, color: Color, left: RBTree[E], right: RBTree[E]): RBTree[E] = Branch(value, color, left, right)
+  private def build[E : Ordering](value: E, color: Color, left: RBTree[E], right: RBTree[E])(implicit vf: ValueFactory[E]): RBTree[E] = vf.build(value, color, left, right)
 
   /**
     * Builds an empty tree node with a specified color.
     */
-  private def build[E : Ordering](value: E, color: Color): RBTree[E] = Branch(value, color, BLeaf, BLeaf)
+  private def build[E : Ordering](value: E, color: Color)(implicit vf: ValueFactory[E]): RBTree[E] = vf.build(value, color, BLeaf, BLeaf)
 
 }
 
@@ -301,3 +303,21 @@ case object Black extends Color
 case object DoubleBlack extends Color
 /** Extra color used for balancing trees during the deletion process (not found in the resulting tree) */
 case object NegativeBlack extends Color
+
+/**
+  * Lets the user process the value of a node before admitting it to the tree by overwriting the mValue method.
+  * @tparam E Tree value type.
+  */
+abstract class ValueFactory[E : Ordering] {
+
+  final def build(value: E, color: Color, left: RBTree[E], right: RBTree[E]): RBTree[E] = {
+    Branch(mValue(value, left, right), color, left, right)
+  }
+
+  def mValue(v: E, left: RBTree[E], right: RBTree[E]): E = v
+
+}
+
+object ValueFactory {
+  def default[E : Ordering] = new ValueFactory[E]() { /* Default implementation */ }
+}

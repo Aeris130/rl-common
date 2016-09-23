@@ -4,7 +4,7 @@ import net.cyndeline.rlcommon.SpecImports
 import spire.math.Rational
 
 class LineSpec extends SpecImports {
-
+  implicit def intTupleToRational(t: (Int, Int)): (Rational, Rational) = (Rational(t._1), Rational(t._2))
   private def line(from: (Int, Int), to: (Int, Int)): Line = Line(Point(from._1, from._2), Point(to._1, to._2))
 
   describe("Line") {
@@ -106,6 +106,141 @@ class LineSpec extends SpecImports {
       Then("the result should be false")
       collinear1 should be (false)
       collinear2 should be (false)
+
+    }
+
+    /*
+     * Angles
+     */
+
+    it ("should compute angle 0 for a horizontal line") {
+
+      Given("a horizontal line")
+      val l = line((0, 0), (3, 0))
+
+      When("computing the angle")
+      val angle = l.angle
+
+      Then("the angle should be 0")
+      angle should be (Rational.zero)
+
+    }
+
+    it ("should compute 180 for a horizontal line beginning to the right") {
+
+      Given("a horizontal line beginning to the right of its end point")
+      val l = line((3, 0), (0, 0))
+
+      When("computing the angle")
+      val angle = l.angle
+
+      Then("the angle should be 180")
+      angle should be (Rational(180))
+
+    }
+
+    it ("should compute angle 90 for a line pointing upwards") {
+
+      Given("a vertical line starting below")
+      val l = line((3, 2), (3, 6))
+
+      When("computing the angle")
+      val angle = l.angle
+
+      Then("the angle should be 90")
+      angle should be (Rational(90))
+
+    }
+
+    it ("should compute angle -90 for a line pointing downwards") {
+
+      Given("a vertical line starting below")
+      val l = line((3, 6), (3, 2))
+
+      When("computing the angle")
+      val angle = l.angle
+
+      Then("the angle should be -90")
+      angle should be (Rational(-90))
+
+    }
+
+    it ("should compute a diagonal angle") {
+
+      Given("a line between (0,0) and (1,1)")
+      val l = line((0, 0), (1, 1))
+
+      When("computing the angle")
+      val angle = l.angle
+
+      Then("the angle should be 45")
+      angle should be (Rational(45))
+
+    }
+
+    /*
+     *
+     * Distance to point / line
+     *
+     */
+
+    it ("should compute distance 0 to an overlapping point") {
+
+      Given("a line")
+      val l = line((2, 3), (6, 7))
+
+      When("computing distances to a point on l")
+      val distanceToP = l.distanceTo(RPoint(4, 5))
+      val distanceToEndpoint = l.distanceTo(RPoint(6, 7))
+
+      Then("the distance should be 0")
+      distanceToP should be (0)
+      distanceToEndpoint should be (0)
+
+    }
+
+    it ("should compute the distance to a point outside the line") {
+
+      Given("a line")
+      val l = line((6, 7), (2, 3))
+
+      When("computing the distance two a point two coordinates above the line")
+      val distanceToP = l.distanceTo(RPoint(6, 9))
+
+      Then("the distance should be 2")
+      distanceToP should be (2)
+
+    }
+
+    it ("should compute the vertical distance between two lines") {
+
+      Given("two lines separated on the y axis by 3 coordinates")
+      val l1 = line((2, 2), (7, 2))
+      val l2 = line((3, 5), (6, 5))
+
+      When("computing the distance between the lines")
+      val d1 = l1.distanceTo(l2)
+      val d2 = l2.distanceTo(l1)
+
+      Then("the distance should be 3")
+      d1 should be (3)
+      d2 should be (3)
+
+    }
+
+    it ("should compute the horizontal distance between two lines") {
+
+      Given("two lines separated on the x axis by 4 coordinates")
+      val l1 = line((2, 6), (2, 3))
+      val l2 = line((6, 2), (6, 6))
+
+      When("computing the distance between the lines")
+      val d1 = l1.distanceTo(l2)
+      val d2 = l2.distanceTo(l1)
+
+      Then("the distance should be 4")
+      d1 should be (4)
+      d2 should be (4)
 
     }
 

@@ -14,6 +14,14 @@ class RBTreeSpec extends SpecImports {
       .insert(-3).insert(6).insert(22).insert(20).insert(27)
   }
 
+  /* A tree where 1 == 2 */
+  private def customOrdering = new {
+    val tree = RBTree.build[Int](1)
+    val o = new Ordering[Int]() {
+      override def compare(x: Int, y: Int): Int = if (Set(x, y) == Set(1, 2)) 0 else x compareTo y
+    }
+  }
+
   describe("RBTree") {
 
     it ("should add an element as root") {
@@ -50,6 +58,34 @@ class RBTreeSpec extends SpecImports {
       tree.contains(-12) should be (false)
       tree.contains(7) should be (false)
       tree.contains(81) should be (false)
+
+    }
+
+    it ("should check the existence of elements using custom orderings") {
+
+      Given("a tree with element 1 and an ordering where 1 == 2")
+      val f = customOrdering
+      import f._
+
+      When("checking the existence of 2")
+      val exists2 = tree.contains(2)(o)
+
+      Then("the result should be true")
+      exists2 should be (true)
+
+    }
+
+    it ("should retrieve sub-trees using custom ordering") {
+
+      Given("a tree with element 1 and an ordering where 1 == 2")
+      val f = customOrdering
+      import f._
+
+      When("retrieving the sub-tree for 2")
+      val sub2 = tree.subTree(2)(o)
+
+      Then("the node for 1 should be returned")
+      sub2.value should be (1)
 
     }
 

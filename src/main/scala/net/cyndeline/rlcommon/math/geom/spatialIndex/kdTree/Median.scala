@@ -2,7 +2,10 @@ package net.cyndeline.rlcommon.math.geom.spatialIndex.kdTree
 
 import java.util.Comparator
 
+import net.cyndeline.rlcommon.math.geom.spatialIndex.common.ElementProperty
 import net.cyndeline.rlcommon.sorting.HeapSort
+
+import Ordering.Implicits._
 
 /**
   * Splits a list of elements based on a median value, then reports the median and both splits. The running time
@@ -10,8 +13,8 @@ import net.cyndeline.rlcommon.sorting.HeapSort
   * by Russel A. Brown, and uses a merge sort to order elements.
   */
 class Median[E] private (prop: ElementProperty[E],
-                         superKeys: Vector[Ordering[E]],
-                         lists: Vector[Vector[E]]) {
+                        superKeys: Vector[Ordering[E]],
+                        lists: Vector[Vector[E]]) {
 
   /** @return True if this median doesn't contain any additional elements to split. Otherwise false. */
   def isEmpty: Boolean = lists(0).isEmpty

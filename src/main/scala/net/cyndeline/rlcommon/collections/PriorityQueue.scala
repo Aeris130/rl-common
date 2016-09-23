@@ -66,6 +66,12 @@ class PriorityQueue[E] private (private val rbTree: RBTree[E])(implicit ord: Ord
     elements.toVector
   }
 
+  /** @return The current greatest value in the queue in log(n) time. */
+  def max: E = {
+    require(!rbTree.isEmpty, "Cannot retrieve max value from an empty queue.")
+    rbTree.max
+  }
+
   private def make(tree: RBTree[E]): PriorityQueue[E] = new PriorityQueue(tree)
 
   override def toString: String = if (isEmpty) {

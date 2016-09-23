@@ -1,19 +1,23 @@
 package net.cyndeline.rlcommon.math.geom.spatialIndex.kdTree
 
 import net.cyndeline.rlcommon.SpecImports
-import net.cyndeline.rlcommon.math.geom.Point
+import net.cyndeline.rlcommon.math.geom.spatialIndex.common.ElementProperty
+import net.cyndeline.rlcommon.math.geom.{Point, RPoint}
+import spire.math.Rational
 
 class MedianSpec extends SpecImports {
 
   private case class Point3D(x: Int, y: Int, z: Int)
   private val prop = new ElementProperty[Point3D]() {
     override val totalDimensions: Int = 3
-    override def value(element: Point3D, dimension: Int): Int = dimension match {
+    override def value(element: Point3D, dimension: Int): Rational = dimension match {
       case 1 => element.x
       case 2 => element.y
       case 3 => element.z
       case _ => throw new Error("Unspecified dimension for " + element + ": " + dimension)
     }
+    override def distance(a: Point3D, b: Point3D) = ???
+    override def axisDistance(a: Point3D, b: Point3D, dimension: Int): Rational = ??? // Not needed for medians.
   }
 
   describe("Median") {
@@ -21,10 +25,10 @@ class MedianSpec extends SpecImports {
     it ("should compute the median for a single element") {
 
       Given("a single element list")
-      val e = Vector(Point(0, 0))
+      val e = Vector(RPoint(0, 0))
 
       When("computing its median")
-      val median: (Point, Median[Point], Median[Point]) = Median[Point](e, new Point2DProperty()).split(1)
+      val median = Median[RPoint](e, new Point2DProperty()).split(1)
 
       Then("the element should be the median")
       median._1 should be (e.head)

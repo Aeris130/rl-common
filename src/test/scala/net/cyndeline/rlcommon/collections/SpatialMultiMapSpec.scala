@@ -1,7 +1,7 @@
 package net.cyndeline.rlcommon.collections
 
 import net.cyndeline.rlcommon.SpecImports
-import net.cyndeline.rlcommon.math.geom.{Point, Rectangle}
+import net.cyndeline.rlcommon.math.geom.{Point, RPoint, Rectangle}
 
 class SpatialMultiMapSpec extends SpecImports {
 
@@ -13,7 +13,7 @@ class SpatialMultiMapSpec extends SpecImports {
       val map = SpatialMultiMap.withPoint2D[Int]()
 
       When("mapping an element to a value")
-      val element = Point(0, 0)
+      val element = RPoint(0, 0)
       val value = 1
       val withElement = map + (element -> value)
 
@@ -26,7 +26,7 @@ class SpatialMultiMapSpec extends SpecImports {
 
       Given("an empty map and an element")
       val map = SpatialMultiMap.withPoint2D[Int]()
-      val element = Point(2, 2)
+      val element = RPoint(2, 2)
 
       When("mapping the element to two values")
       val v1 = 1
@@ -41,7 +41,7 @@ class SpatialMultiMapSpec extends SpecImports {
     it ("should discard duplicates") {
 
       Given("a map that maps an element to the value")
-      val e = Point(0, 0)
+      val e = RPoint(0, 0)
       val v = 1
       val map = SpatialMultiMap.withPoint2D[Int]() + (e -> v)
 
@@ -56,8 +56,8 @@ class SpatialMultiMapSpec extends SpecImports {
     it ("should delete a value") {
 
       Given("a map with three key-value pairs")
-      val toBeDeleted = Point(2, 2) -> 2
-      val map = SpatialMultiMap.withPoint2D[Int]() + (Point(1, 1) -> 1, toBeDeleted, Point(3, 3) -> 3)
+      val toBeDeleted = RPoint(2, 2) -> 2
+      val map = SpatialMultiMap.withPoint2D[Int]() + (RPoint(1, 1) -> 1, toBeDeleted, RPoint(3, 3) -> 3)
 
       When("deleting one value")
       val deleted = map - toBeDeleted
@@ -66,23 +66,23 @@ class SpatialMultiMapSpec extends SpecImports {
       deleted.keySize should be (2)
 
       And("both remaining entries should exist")
-      deleted.get(Point(1, 1)) should be (Some(Set(1)))
-      deleted.get(Point(3, 3)) should be (Some(Set(3)))
+      deleted.get(RPoint(1, 1)) should be (Some(Set(1)))
+      deleted.get(RPoint(3, 3)) should be (Some(Set(3)))
 
     }
 
     it ("should not attempt to delete non-existent values") {
 
       Given("a map with an element mapped to a value")
-      val map = SpatialMultiMap.withPoint2D[Int]() + (Point(1, 1) -> 1)
+      val map = SpatialMultiMap.withPoint2D[Int]() + (RPoint(1, 1) -> 1)
 
       When("deleting the value using the wrong key or value")
       Then("an exception should be thrown")
       intercept[NoSuchElementException] {
-        map - (Point(3, 3), 1)
+        map - (RPoint(3, 3), 1)
       }
       intercept[NoSuchElementException] {
-        map - (Point(1, 1), 2)
+        map - (RPoint(1, 1), 2)
       }
 
     }
@@ -90,24 +90,24 @@ class SpatialMultiMapSpec extends SpecImports {
     it ("should maintain keys that are mapped to multiple values when deleting one value") {
 
       Given("a map with a key mapped to two values")
-      val map = SpatialMultiMap.withPoint2D[Int]() + (Point(1, 1) -> 1, Point(1, 1) -> 2)
+      val map = SpatialMultiMap.withPoint2D[Int]() + (RPoint(1, 1) -> 1, RPoint(1, 1) -> 2)
 
       When("deleting one of the values")
-      val deleted = map - (Point(1, 1), 2)
+      val deleted = map - (RPoint(1, 1), 2)
 
       Then("the remaining value should still be in the map")
-      deleted.get(Point(1, 1)) should be (Some(Set(1)))
+      deleted.get(RPoint(1, 1)) should be (Some(Set(1)))
 
     }
 
     it ("should return mapped values based on a spatial range search") {
 
       Given("a map with five mappings")
-      val m1 = Point(1, 1) -> 1
-      val m2 = Point(1, 1) -> 11
-      val m3 = Point(3, 3) -> 3
-      val m4 = Point(5, 5) -> 5
-      val m5 = Point(7, 7) -> 7
+      val m1 = RPoint(1, 1) -> 1
+      val m2 = RPoint(1, 1) -> 11
+      val m3 = RPoint(3, 3) -> 3
+      val m4 = RPoint(5, 5) -> 5
+      val m5 = RPoint(7, 7) -> 7
       val map = SpatialMultiMap.withPoint2D[Int]() + (m1, m2, m3, m4, m5)
 
       When("retrieving values mapped within the range enclosing values 1 to 4")
@@ -135,7 +135,7 @@ class SpatialMultiMapSpec extends SpecImports {
     it ("should not include results in a ranged search after deleting them") {
 
       Given("a map with a point")
-      val p = Point(1, 2)
+      val p = RPoint(1, 2)
       val map = SpatialMultiMap.withPoint2D[Int]() + (p, 1)
 
       When("deleting the point and performing a ranged search including it")

@@ -2,8 +2,10 @@ package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
 
 import net.cyndeline.rlcommon.SpecImports
 import net.cyndeline.rlcommon.math.geom.{Line, RPoint}
+import spire.math.Rational
 
 class BentleyOttmannIntersectionSpec extends SpecImports {
+  implicit def intTupleToRational(t: (Int, Int)): (Rational, Rational) = (Rational(t._1), Rational(t._2))
   private val algorithm = BentleyOttmannIntersection.withoutSinglePointIntersections
   private val algWithSinglePoints = BentleyOttmannIntersection.withSinglePointIntersections
 

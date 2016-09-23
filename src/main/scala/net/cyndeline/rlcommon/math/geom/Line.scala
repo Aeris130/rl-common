@@ -17,6 +17,15 @@ class Line(val start: RPoint, val stop: RPoint) {
   }
 
   /**
+    * @return An approximation of angle (in degrees) between the line and the horizontal axis.
+    */
+  def angle: Rational = {
+    val deltaX = stop.x - start.x
+    val deltaY = stop.y - start.y
+    Math.atan2(deltaY.toDouble, deltaX.toDouble) * 180 / Math.PI
+  }
+
+  /**
     * @param other Another line.
     * @return True if this line is collinear with the other, otherwise false.
     */
@@ -40,6 +49,46 @@ class Line(val start: RPoint, val stop: RPoint) {
     assert(start != stop, "Attempted to compute slope for a single-point segment.")
     assert(start.x != stop.x, "Attempted to compute slope for a vertical segment.")
     (stop.y - start.y) / (stop.x - start.x)
+  }
+
+  /**
+    * Computes the shortest distance from this line to another line.
+    * @param other Another line.
+    * @return The shortest distances between the lines, or 0 if they intersect or overlap at some coordinate.
+    */
+  def distanceTo(other: Line): Rational = {
+
+    // For two 2D lines AB and CD, the shortest distance is min(AB:C, AB:D, CD:A, CD:B)
+    this.distanceTo(other.start).min(
+      this.distanceTo(other.stop)).min(
+      other.distanceTo(start).min(
+        other.distanceTo(stop)
+      )
+    )
+
+  }
+
+  /**
+    * Computes the shortest distance from this line to some point p.
+    * @param p A point.
+    * @return The shortest distance from this line to the point, or 0 if the point overlaps the line.
+    */
+  def distanceTo(p: RPoint): Rational = {
+    def sqr(x: Rational) = x * x
+    def dist2(a: RPoint, b: RPoint) = sqr(a.x - b.x) + sqr(a.y - b.y)
+    def distToSegmentSquared(p: RPoint, start: RPoint, stop: RPoint): Rational = {
+      val l2 = dist2(start, stop)
+      if (l2 == 0) {
+        dist2(p, start)
+      } else {
+        val t1 = ((p.x - start.x) * (stop.x - start.x) + (p.y - start.y) * (stop.y - start.y)) / l2
+        val t2 = t1.min(1).max(0)
+        val dp = RPoint(start.x + t2 * (stop.x - start.x), start.y + t2 * (stop.y - start.y))
+        dist2(p, dp)
+      }
+    }
+
+    Rational(Math.sqrt(distToSegmentSquared(p, this.start, this.stop).toDouble))
   }
 
   /**
@@ -307,5 +356,5 @@ class Line(val start: RPoint, val stop: RPoint) {
 object Line {
   def apply(from: RPoint, to: RPoint): Line = new Line(from, to)
   def apply(from: Point, to: Point): Line = apply(RPoint(from), RPoint(to))
-  def apply(from: (Int, Int), to: (Int, Int)) = new Line(RPoint(from), RPoint(to))
+  def apply(from: (Rational, Rational), to: (Rational, Rational)) = new Line(RPoint(from), RPoint(to))
 }

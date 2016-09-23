@@ -3,6 +3,7 @@ package net.cyndeline.rlcommon.math.geom
 import net.cyndeline.rlcommon.SpecImports
 
 class RectangleSpec extends SpecImports {
+  private implicit def pointToRational(p: Point): RPoint = RPoint(p)
 
   describe("Rectangle") {
 
@@ -127,8 +128,8 @@ class RectangleSpec extends SpecImports {
       val centered = Rectangle.centerAround(p, width, height)
 
       Then("the rectangle should begin at (2,2) and end at (4,6)")
-      centered.start should be (Point(2, 2))
-      centered.stop should be (Point(4, 6))
+      centered.start should be (RPoint(2, 2))
+      centered.stop should be (RPoint(4, 6))
 
       And("the rectangle should have the specified height/width")
       centered.width should be (width)
@@ -147,8 +148,8 @@ class RectangleSpec extends SpecImports {
       val centered = Rectangle.centerAround(p, width, height)
 
       Then("the rectangle should begin at (2,2) and end at (5,7)")
-      centered.start should be (Point(2, 2))
-      centered.stop should be (Point(5, 7))
+      centered.start should be (RPoint(2, 2))
+      centered.stop should be (RPoint(5, 7))
 
       And("the rectangle should have the specified height/width")
       centered.width should be (width)

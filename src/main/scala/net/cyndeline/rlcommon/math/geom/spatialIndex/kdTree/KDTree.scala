@@ -1,13 +1,21 @@
 package net.cyndeline.rlcommon.math.geom.spatialIndex.kdTree
 
-import net.cyndeline.rlcommon.math.geom.{Point, Rectangle}
+import net.cyndeline.rlcommon.collections.BoundedPriorityQueue
+import net.cyndeline.rlcommon.math.geom.spatialIndex.common.ElementProperty
+import net.cyndeline.rlcommon.math.geom.{RPoint, Rectangle}
+import spire.math.Rational
+
+import Ordering.Implicits._
 
 /**
   * A spatial index allowing for log(n) inserts, deletions and lookups, given that the tree is balanced. Creating
   * a new tree takes O(kn log n) time, where k is the number of dimensions in the data set. Balancing the tree is
   * done in O(kn log n) time using the median algorithm by Russel A. Brown.
+  *
+  * @tparam E The element (point) value in the tree.
+  * @tparam R The values used as ranges when performing range searches.
   */
-abstract class KDTree[E, R](prop: ElementProperty[E], rangeProp: RangeProperty[E, R]) {
+abstract class KDTree[E : Ordering, R](prop: ElementProperty[E], rangeProp: RangeProperty[E, R]) {
 
   /** The value stored in this tree node (i.e in the root of this tree). */
   def value: E
@@ -159,6 +167,78 @@ abstract class KDTree[E, R](prop: ElementProperty[E], rangeProp: RangeProperty[E
     ran(this, 0)
   }
 
+  /**
+    * Finds the k nearest neighbors to a given point in O(k log n) time if the tree is balanced.
+    * @param k The number of neighbors to return.
+    * @param p A point in the tree.
+    * @return The k points in the tree that lies closest to p, or every point if he tree has less than k elements.
+    *         If p is in the tree, it will be returned along with (k-1) other points.
+    */
+  def nearestNeighbor(k: Int, p: E): Vector[E] = {
+    require(k >= 0, "Number of neighbors sought must be >= 0.")
+    knn(k, p, 1)
+  }
+
+  /**
+    * An optimization of the k-nearest-neighbor algorithm, using an approximation value 'a. During the algorithms
+    * traversal, any sub-tee whose bounding box lies further away than the distance r, which is the distance to
+    * the current furthest away neighbor in the result. This heuristic instead uses the value (r / 'a),
+    * resulting in a much faster traversal due to increased pruning. This no longer guarantees that the result will
+    * contain all the nearest neighbors, but if a neighbor with distance d to the search point is returned, no
+    * missed neighbor can be closer to the search point than (r / 'a). Overall, the search saves lots of time
+    * at little cost to the quality of the result.
+    * @param approx Denominator to use when pruning sub-trees.
+    */
+  def nearestNeighborApproximation(k: Int, p: E, approx: Int): Vector[E] = {
+    require(approx > 1, "Approximation value must > 1, as 1 results in a regular KNN search.")
+    knn(k, p, approx)
+  }
+
+  private def knn(k: Int, p: E, approximation: Rational): Vector[E] = {
+    if (k == 0)
+      return Vector()
+
+    case class PrioStore(e: E, priority: Rational)
+    val ordering = new Ordering[PrioStore]() {
+      override def compare(x: PrioStore, y: PrioStore): Int = {
+        val order = x.priority.compare(y.priority)
+        if (order == 0)
+          if (x.e < y.e) -1
+          else if (y.e < x.e) 1
+          else 0
+        else
+          order
+      }
+    }
+    var queue = BoundedPriorityQueue[PrioStore](k)(ordering) // Algorithm stops when this is full
+
+    def traverse(current: KDTree[E, R], d: Int): Unit = if (!current.isEmpty) {
+      val dimension = if (d > prop.totalDimensions) 1 else d
+      val v = current.value
+
+      /* Insert the points into the queue and prioritize them according to their distance to p. When the queue is full,
+       * every point with greater distance to p than the current greatest distance will not be inserted.
+       */
+      queue = queue.insert(PrioStore(current.value, prop.distance(v, p)))
+      var left = false
+
+      if (prop.value(p, dimension) < prop.value(v, dimension)) {
+        left = true
+        traverse(current.left, d + 1)
+      }
+      else
+        traverse(current.right, d + 1)
+
+      if (!queue.isFull || prop.axisDistance(v, p, dimension) <= (queue.max.priority / approximation)) {
+        val oppositeSide = if (left) current.right else current.left
+        traverse(oppositeSide, d + 1)
+      }
+    }
+
+    traverse(this, 1)
+    queue.values.map(_.e)
+  }
+
   private def minimum(tree: KDTree[E, R], dimension: Int, depth: Int): KDTree[E, R] = if (tree.isEmpty) {
     throw new NoSuchElementException("Empty tree contains no minimum value.")
   } else {
@@ -213,7 +293,7 @@ abstract class KDTree[E, R](prop: ElementProperty[E], rangeProp: RangeProperty[E
 
 }
 
-class Branch[E, R] private (val value: E, val left: KDTree[E, R], val right: KDTree[E, R], ep: ElementProperty[E], rp: RangeProperty[E, R]) extends KDTree[E, R](ep, rp) {
+class Branch[E : Ordering, R] private (val value: E, val left: KDTree[E, R], val right: KDTree[E, R], ep: ElementProperty[E], rp: RangeProperty[E, R]) extends KDTree[E, R](ep, rp) {
   override def isEmpty: Boolean = false
 
   override def equals(other: Any): Boolean = other match {
@@ -226,10 +306,10 @@ class Branch[E, R] private (val value: E, val left: KDTree[E, R], val right: KDT
 }
 
 object Branch {
-  def apply[E, R](v: E, l: KDTree[E, R], r: KDTree[E, R], ep: ElementProperty[E], rp: RangeProperty[E, R]): Branch[E, R] = new Branch(v, l, r, ep, rp)
+  def apply[E : Ordering, R](v: E, l: KDTree[E, R], r: KDTree[E, R], ep: ElementProperty[E], rp: RangeProperty[E, R]): Branch[E, R] = new Branch(v, l, r, ep, rp)
 }
 
-case class Empty[E, R](ep: ElementProperty[E], rp: RangeProperty[E, R]) extends KDTree[E, R](ep, rp) {
+case class Empty[E : Ordering, R](ep: ElementProperty[E], rp: RangeProperty[E, R]) extends KDTree[E, R](ep, rp) {
   override def value = error("No value specified for empty tree.")
   override def left = error("Attempted to retrieve left child of an empty tree.")
   override def right = error("Attempted to retrieve right child of an empty tree.")
@@ -249,7 +329,7 @@ object KDTree {
     * @tparam E Element type in the tree.
     * @tparam R Range type in the tree.
     */
-  def empty[E, R](ep: ElementProperty[E], rp: RangeProperty[E, R]): KDTree[E, R] = Empty[E, R](ep, rp)
+  def empty[E : Ordering, R](ep: ElementProperty[E], rp: RangeProperty[E, R]): KDTree[E, R] = Empty[E, R](ep, rp)
 
   /**
     * Builds a balanced tree from an initial set of elements.
@@ -259,7 +339,7 @@ object KDTree {
     * @tparam E Element type in the tree.
     * @tparam R Range type in the tree.
     */
-  def apply[E, R](elements: Vector[E], ep: ElementProperty[E], rp: RangeProperty[E, R]): KDTree[E, R] = {
+  def apply[E : Ordering, R](elements: Vector[E], ep: ElementProperty[E], rp: RangeProperty[E, R]): KDTree[E, R] = {
     if (elements.isEmpty)
       empty[E, R](ep, rp)
     else {
@@ -272,7 +352,7 @@ object KDTree {
   /**
     * @return A tree with pre-set properties for 2D integer points.
     */
-  def point2DTree(elements: Vector[Point]): KDTree[Point, Rectangle] = {
+  def point2DTree(elements: Vector[RPoint]): KDTree[RPoint, Rectangle] = {
     val elementAndRange = new Point2DProperty()
     apply(elements, elementAndRange, elementAndRange)
   }
@@ -285,7 +365,7 @@ object KDTree {
     apply(elements, elementAndRange, elementAndRange)
   }
 
-  private def kdTree[E, R](depth: Int, median: Median[E], ep: ElementProperty[E], rp: RangeProperty[E, R]): KDTree[E, R] = {
+  private def kdTree[E : Ordering, R](depth: Int, median: Median[E], ep: ElementProperty[E], rp: RangeProperty[E, R]): KDTree[E, R] = {
     val split = median.split((depth % ep.totalDimensions) + 1)
     val element = split._1
     val left = if (split._2.isEmpty) KDTree.empty[E, R](ep, rp) else kdTree(depth + 1, split._2, ep, rp)

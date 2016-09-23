@@ -123,7 +123,7 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(Segment.comp
 
 object Segment {
   def apply[L <: Line](id: Int, original: L): Segment[L] = new Segment[L](id, original)
-  def apply(id: Int, source: (Int, Int), target: (Int, Int)): Segment[Line] = new Segment(id, Line(source, target))
+  def apply(id: Int, source: (Int, Int), target: (Int, Int)): Segment[Line] = new Segment(id, Line((Rational(source._1), Rational(source._2)), (Rational(target._1), Rational(target._2))))
   def apply(id: Int, source: Point, target: Point): Segment[Line] = new Segment(id, Line(source, target))
 
   def computeSource(l: Line): RPoint = if (l.start.x < l.stop.x ||

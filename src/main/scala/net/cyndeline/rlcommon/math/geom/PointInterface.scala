@@ -1,5 +1,7 @@
 package net.cyndeline.rlcommon.math.geom
 
+import spire.math.Rational
+
 /**
   * Common methods for all points.
   *
@@ -25,7 +27,9 @@ trait PointInterface[P <: PointInterface[P, T], T] {
   def *(s: T): P
   def *(p: P): P
 
+  def move(angle: Rational, distance: Rational): P
+
   def crossProduct(p: P): T
-  def distanceTo(p: P): Double
+  def distanceTo(p: P): Rational
 
 }

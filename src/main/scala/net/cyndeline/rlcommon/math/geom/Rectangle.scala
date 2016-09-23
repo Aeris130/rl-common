@@ -1,12 +1,14 @@
 package net.cyndeline.rlcommon.math.geom
 
+import spire.math.{Algebraic, Rational}
+
 /**
   * Rectangle on the cartesian place, aligned with the x and y axis.
   */
-class Rectangle (val start: Point, val width: Int, val height: Int) {
+class Rectangle (val start: RPoint, val width: Rational, val height: Rational) extends Ordered[Rectangle] {
 
-  val diagonal: Double = Math.sqrt((width * width) + (height * height))
-  def stop: Point = start + (width - 1, height - 1)
+  val diagonal: Double = Algebraic((width * width) + (height * height)).sqrt.doubleValue()
+  def stop: RPoint = start + (Rational(width - 1), Rational(height - 1))
 
   def containsPoint(p: Point): Boolean = containsPoint(RPoint(p))
   def containsPoint(p: RPoint): Boolean = {
@@ -44,10 +46,10 @@ class Rectangle (val start: Point, val width: Int, val height: Int) {
 
     val startX = if (r1Start.x > r2Start.x) r1Start.x else r2Start.x
     val startY = if (r1Start.y > r2Start.y) r1Start.y else r2Start.y
-    val stopX = Math.min(r1Stop.x, r2Stop.x)
-    val stopY = Math.min(r1Stop.y, r2Stop.y)
+    val stopX = r1Stop.x.min(r2Stop.x)
+    val stopY = r1Stop.y.min(r2Stop.y)
 
-    Some(Rectangle(Point(startX, startY), Point(stopX, stopY)))
+    Some(Rectangle(RPoint(startX, startY), RPoint(stopX, stopY)))
   } else {
     None
   }
@@ -77,7 +79,7 @@ class Rectangle (val start: Point, val width: Int, val height: Int) {
     * @return The distance between a point on each rectangle that lies closest to each other. 0 if the rectangles
     *         share a line segment, -1 if they overlap.
     */
-  def shortestDistance(other: Rectangle): Double = {
+  def shortestDistance(other: Rectangle): Rational = {
     if (isSingleCoordinate(this) && isSingleCoordinate(other) && start == other.start)
       return -1
 
@@ -91,13 +93,13 @@ class Rectangle (val start: Point, val width: Int, val height: Int) {
     val top = thisStop.y <= otherStart.y
 
     if (top && left)
-      Point(thisStart.x, thisStop.y).distanceTo(Point(otherStop.x, otherStart.y))
+      RPoint(thisStart.x, thisStop.y).distanceTo(RPoint(otherStop.x, otherStart.y))
     else if (left &&  bottom)
-      Point(thisStart.x, thisStart.y).distanceTo(Point(otherStop.x, otherStop.y))
+      RPoint(thisStart.x, thisStart.y).distanceTo(RPoint(otherStop.x, otherStop.y))
     else if (bottom  && right)
-      Point(thisStop.x, thisStart.y).distanceTo(Point(otherStart.x, otherStop.y))
+      RPoint(thisStop.x, thisStart.y).distanceTo(RPoint(otherStart.x, otherStop.y))
     else if (right && top)
-      Point(thisStop.x, thisStop.y).distanceTo(Point(otherStart.x, otherStart.y))
+      RPoint(thisStop.x, thisStop.y).distanceTo(RPoint(otherStart.x, otherStart.y))
     else if (left)
       thisStart.x - otherStop.x
     else if (right)
@@ -112,6 +114,19 @@ class Rectangle (val start: Point, val width: Int, val height: Int) {
 
   private def isSingleCoordinate(r: Rectangle) = r.width == 1 && r.height == 1
 
+  override def compare(that: Rectangle): Int = {
+    val startOrder = this.start.compare(that.start)
+    if (startOrder != 0)
+      startOrder
+    else {
+      val stopOrder = this.stop.compare(that.stop)
+      if (stopOrder != 0)
+        stopOrder
+      else
+        0
+    }
+  }
+
   override def equals(other: Any): Boolean = other match {
     case r: Rectangle => start == r.start && width == r.width && height == r.height
     case _ => false
@@ -124,15 +139,17 @@ class Rectangle (val start: Point, val width: Int, val height: Int) {
 }
 
 object Rectangle {
-  def apply(start: Point, width: Int, height: Int): Rectangle = new Rectangle(start, width, height)
-  def apply(start: Point, dim: Dimensions): Rectangle = new Rectangle(start, dim.width, dim.height)
-  def apply(start: Point, stop: Point): Rectangle = {
-    val startX = Math.min(start.x, stop.x)
-    val startY = Math.min(start.y, stop.y)
-    val width = Math.abs(start.x - stop.x) + 1
-    val height = Math.abs(start.y - stop.y) + 1
-    new Rectangle(Point(startX, startY), width, height)
+  def apply(start: RPoint, width: Int, height: Int): Rectangle = new Rectangle(start, width, height)
+  def apply(start: RPoint, dim: Dimensions): Rectangle = new Rectangle(start, dim.width, dim.height)
+  def apply(start: RPoint, stop: RPoint): Rectangle = {
+    val startX = start.x min stop.x
+    val startY = start.y min stop.y
+    val width = (start.x - stop.x).abs + 1
+    val height = (start.y - stop.y).abs + 1
+    new Rectangle(RPoint(startX, startY), width, height)
   }
+
+  def apply(start: Point, width: Int, height: Int): Rectangle = apply(RPoint(start), width, height)
 
   /**
     * Computes a starting coordinate for a rectangle that has a given point p as its center. If the supplied width and
@@ -142,10 +159,10 @@ object Rectangle {
     * @param height Rectangle height.
     * @return A rectangle with given width and height, with p in its center.
     */
-  def centerAround(p: Point, width: Int, height: Int): Rectangle = {
+  def centerAround(p: RPoint, width: Int, height: Int): Rectangle = {
     val xAdjust = adjust(width)
     val yAdjust = adjust(height)
-    apply(Point(p.x - xAdjust, p.y - yAdjust), width, height)
+    apply(RPoint(p.x - xAdjust, p.y - yAdjust), width, height)
   }
 
   private def adjust(v: Int): Int = if (v % 2 != 0) Math.floor(v / 2d).toInt else (v / 2) - 1

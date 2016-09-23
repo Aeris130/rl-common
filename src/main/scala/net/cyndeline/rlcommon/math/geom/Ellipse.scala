@@ -1,5 +1,7 @@
 package net.cyndeline.rlcommon.math.geom
 
+import spire.math.Rational
+
 /**
   * 2D ellipse.
   *
@@ -7,17 +9,17 @@ package net.cyndeline.rlcommon.math.geom
   * @param xRadius Radius of the ellipse along the x axis, given that it is angled orthogonally.
   * @param yRadius Radius of the ellipse along the y axis, given that it is angled orthogonally.
   */
-class Ellipse(center: DPoint, xRadius: Double, yRadius: Double, angle: Double) {
+class Ellipse(center: RPoint, xRadius: Rational, yRadius: Rational, angle: Int) {
 
   /**
     * Creates an ellipse with its radius's angled along their axis.
     */
-  def this(center: DPoint, xRadius: Double, yRadius: Double) = this(center, xRadius, yRadius, 0)
+  def this(center: RPoint, xRadius: Rational, yRadius: Rational) = this(center, xRadius, yRadius, 0)
 
   private val radianAngle = Math.toRadians(angle)
 
-  private val sinRot = Math.sin(radianAngle)
-  private val cosRot = Math.cos(radianAngle)
+  private val sinRot = Rational(Math.sin(radianAngle))
+  private val cosRot = Rational(Math.cos(radianAngle))
 
   // Workaround: Keep the ellipse in the same position regardless of which side is the longest. Change some day.
   // Major becomes the x axis radius.
@@ -33,20 +35,20 @@ class Ellipse(center: DPoint, xRadius: Double, yRadius: Double, angle: Double) {
     * @param lStop Line stop coordinate (exclusive)
     * @return None if no intersection exists, otherwise one or two points where the line intersects the ellipse.
     */
-  def intersectsLine(lStart: DPoint, lStop: DPoint): Option[Seq[DPoint]] = {
-    val x1: Double = center.x
-    val y1: Double = center.y
-    val u1: Double = lStart.x
-    val v1: Double = lStart.y
-    val u2: Double = lStop.x
-    val v2: Double = lStop.y
-    val dx: Double = u2 - u1
-    val dy: Double = v2 - v1
-    val q0: Double = k1 * SQR(u1 - x1) + k2 * (u1 - x1) * (v1 - y1) + k3 * SQR(v1 - y1) - 1
-    val q1: Double = (2 * k1 * dx * (u1 - x1)) + (k2 * dx * (v1 - y1)) + (k2 * dy * (u1 - x1)) + (2 * k3 * dy * (v1 - y1))
-    val q2: Double = (k1 * SQR(dx)) + (k2 * dx * dy) + (k3 * SQR(dy))
+  def intersectsLine(lStart: RPoint, lStop: RPoint): Option[Seq[RPoint]] = {
+    val x1: Rational = center.x.doubleValue()
+    val y1: Rational = center.y.doubleValue()
+    val u1: Rational = lStart.x
+    val v1: Rational = lStart.y
+    val u2: Rational = lStop.x
+    val v2: Rational = lStop.y
+    val dx: Rational = u2 - u1
+    val dy: Rational = v2 - v1
+    val q0: Rational = k1 * SQR(u1 - x1) + k2 * (u1 - x1) * (v1 - y1) + k3 * SQR(v1 - y1) - 1
+    val q1: Rational = (2 * k1 * dx * (u1 - x1)) + (k2 * dx * (v1 - y1)) + (k2 * dy * (u1 - x1)) + (2 * k3 * dy * (v1 - y1))
+    val q2: Rational = (k1 * SQR(dx)) + (k2 * dx * dy) + (k3 * SQR(dy))
 
-    val d: Double = SQR(q1) - (4 * q0 * q2)
+    val d: Rational = SQR(q1) - (4 * q0 * q2)
 
     if (d < 0) {
       None
@@ -57,7 +59,7 @@ class Ellipse(center: DPoint, xRadius: Double, yRadius: Double, angle: Double) {
       if (0 <= t && t <= 1) {
         val x = u1 + t * dx
         val y = v1 + t * dy
-        Some(Seq(DPoint(x, y)))
+        Some(Seq(RPoint(x, y)))
 
       } else {
         None
@@ -66,25 +68,25 @@ class Ellipse(center: DPoint, xRadius: Double, yRadius: Double, angle: Double) {
 
     } else {
       var n = 0
-      var intersections = Seq[DPoint]()
-      val q: Double = Math.sqrt(d)
-      val t1: Double = (-q1 - q) / (2 * q2)
+      var intersections = Seq[RPoint]()
+      val q: Rational = Rational(Math.sqrt(d.doubleValue()))
+      val t1: Rational = (-q1 - q) / (2 * q2)
 
       if (0 <= t1 && t1 <= 1) {
-        intersections = intersections :+ DPoint(u1 + t1 * dx, v1 + t1 * dy)
+        intersections = intersections :+ RPoint(u1 + t1 * dx, v1 + t1 * dy)
         n += 1
       }
 
-      val t2: Double = (-q1 + q) / (2 * q2)
+      val t2: Rational = (-q1 + q) / (2 * q2)
 
       if (0 <= t2 && t2 <= 1) {
         if (n == 0) {
           if (intersections.isEmpty)
-            intersections = intersections :+ DPoint(u1 + t2 * dx, v1 + t2 * dy)
+            intersections = intersections :+ RPoint(u1 + t2 * dx, v1 + t2 * dy)
 
           n += 1
         } else {
-          intersections = intersections :+ DPoint(u1 + t2 * dx, v1 + t2 * dy)
+          intersections = intersections :+ RPoint(u1 + t2 * dx, v1 + t2 * dy)
 
         }
     }
@@ -102,9 +104,9 @@ class Ellipse(center: DPoint, xRadius: Double, yRadius: Double, angle: Double) {
     * @param p Coordinate to process.
     * @return True if the coordinate lies on or within the ellipses circumference, otherwise false.
     */
-  def containsPoint(p: DPoint): Boolean = {
-    val dx = p.x - center.x
-    val dy = p.y - center.y
+  def containsPoint(p: RPoint): Boolean = {
+    val dx = (p.x - center.x).doubleValue()
+    val dy = (p.y - center.y).doubleValue()
     val eq = (k1 * SQR(dx)) + (k2 * dx * dy) + (k3 * SQR(dy)) - 1
     eq <= 0
   }
@@ -117,21 +119,21 @@ class Ellipse(center: DPoint, xRadius: Double, yRadius: Double, angle: Double) {
     * @return Intersects if both shapes share a point, Outside if no intersection occurs and Inside if the entire
     *         rectangle is enclosed by the ellipse.
     */
-  def intersectsRectangle(rStart: DPoint, rStop: DPoint): IntersectCase = {
+  def intersectsRectangle(rStart: RPoint, rStop: RPoint): IntersectCase = {
     require(rStart != rStop, "Rectangle start and stop coordinates must be separate. To evaluate a single coordinate, use the Point function.")
     require(rStart.x < rStop.x && rStart.y < rStop.y, "Rectangle stop coordinates must be greater than its start coordinates. To evaluate a line, use line intersection.")
 
     /* Check all four lines separately */
-    if (intersectsLine(DPoint(rStart.x, rStop.y), rStop).isDefined) { // Top
+    if (intersectsLine(RPoint(rStart.x, rStop.y), rStop).isDefined) { // Top
       Intersects
 
-    } else if (intersectsLine(DPoint(rStart.x, rStop.y), rStart).isDefined) { // Left
+    } else if (intersectsLine(RPoint(rStart.x, rStop.y), rStart).isDefined) { // Left
       Intersects
 
-    } else if (intersectsLine(rStart, DPoint(rStop.x, rStart.y)).isDefined) { // Bottom
+    } else if (intersectsLine(rStart, RPoint(rStop.x, rStart.y)).isDefined) { // Bottom
       Intersects
 
-    } else if (intersectsLine(rStop, DPoint(rStop.x, rStart.y)).isDefined) { // Right
+    } else if (intersectsLine(rStop, RPoint(rStop.x, rStart.y)).isDefined) { // Right
       Intersects
 
     } else {
@@ -144,6 +146,6 @@ class Ellipse(center: DPoint, xRadius: Double, yRadius: Double, angle: Double) {
     }
   }
 
-  private def SQR(value: Double) = value * value
+  private def SQR(value: Rational) = value * value
 
 }

@@ -2,8 +2,10 @@ package net.cyndeline.rlcommon.math.geom.intersection.shamosHoey
 
 import net.cyndeline.rlcommon.SpecImports
 import net.cyndeline.rlcommon.math.geom.Line
+import spire.math.Rational
 
 class ShamosHoeyAlgorithmSpec extends SpecImports {
+  implicit def intTupleToRational(t: (Int, Int)): (Rational, Rational) = (Rational(t._1), Rational(t._2))
   private val algorithm = new ShamosHoeyAlgorithm()
 
   describe("ShamosHoeyAlgorith") {

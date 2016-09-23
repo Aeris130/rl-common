@@ -1,26 +1,26 @@
 package net.cyndeline.rlcommon.math.geom.spatialIndex.kdTree
 
 import net.cyndeline.rlcommon.SpecImports
-import net.cyndeline.rlcommon.math.geom.{Point, Rectangle}
+import net.cyndeline.rlcommon.math.geom.{Point, RPoint, Rectangle}
 
 class KDTreeSpec extends SpecImports {
 
   private val threePointTree = new {
-    val p1 = Point(3, 3)
-    val p2 = Point(1, 3)
-    val p3 = Point(5, 3)
+    val p1 = RPoint(3, 3)
+    val p2 = RPoint(1, 3)
+    val p3 = RPoint(5, 3)
     val tree = KDTree.point2DTree(Vector(p1, p2, p3))
   }
 
   // Example taken from: https://www.cs.umd.edu/class/spring2002/cmsc420-0401/pbasic.pdf
   private val unbalancedTree = new {
-    val root = Point(20, 20)
+    val root = RPoint(20, 20)
     val tree = KDTree.point2DTree(Vector(root))
-      .insert(Point(10, 30)).insert(Point(25, 50)) // First level
-      .insert(Point(35, 25)) // Second level
-      .insert(Point(30, 45)).insert(Point(55, 40)) // Third level
-      .insert(Point(30, 35)).insert(Point(45, 35)) // Fourth level
-      .insert(Point(50, 30)) // Fifth level
+      .insert(RPoint(10, 30)).insert(RPoint(25, 50)) // First level
+      .insert(RPoint(35, 25)) // Second level
+      .insert(RPoint(30, 45)).insert(RPoint(55, 40)) // Third level
+      .insert(RPoint(30, 35)).insert(RPoint(45, 35)) // Fourth level
+      .insert(RPoint(50, 30)) // Fifth level
   }
 
   private val rectangleSet = new {
@@ -31,6 +31,42 @@ class KDTreeSpec extends SpecImports {
     val r5 = Rectangle(Point(6, 2), 6, 3)
     val r6 = Rectangle(Point(11, 6), 4, 5)
     val elements = Vector(r1, r2, r3, r4, r5, r6)
+  }
+
+  // Various points
+  private def neighborTree = new {
+    val pa = RPoint(1, 1)
+    val pb = RPoint(2, 3)
+    val pc = RPoint(6, 2)
+    val pd = RPoint(9, 6)
+    val pe = RPoint(1, 11)
+    val pf = RPoint(6, 9)
+    val pg = RPoint(6, 3)
+    val tree = KDTree.point2DTree(Vector(pa, pb, pc, pd, pe, pf, pg))
+
+    assert(tree.value == pc)
+    assert(tree.left.value == pb && tree.right.value == pd)
+    assert(tree.left.left.value == pa && tree.left.right.value == pe)
+    assert(tree.right.left.value == pg && tree.right.right.value == pf)
+  }
+
+  // Same as the neighbor tree, but with each point being a wxh rectangle instead.
+  private def singleRectangleTree(width: Int, height: Int) = new {
+    val f = neighborTree
+    import f._
+    val ra = Rectangle(pa, width, height)
+    val rb = Rectangle(pb, width, height)
+    val rc = Rectangle(pc, width, height)
+    val rd = Rectangle(pd, width, height)
+    val re = Rectangle(pe, width, height)
+    val rf = Rectangle(pf, width, height)
+    val rg = Rectangle(pg, width, height)
+    val tree = KDTree.rectangleTree(Vector(ra, rb, rc, rd, re, rf, rg))
+
+    assert(tree.value == rc)
+    assert(tree.left.value == rb && tree.right.value == rd)
+    assert(tree.left.left.value == ra && tree.left.right.value == re)
+    assert(tree.right.left.value == rg && tree.right.right.value == rf)
   }
 
   describe ("KDTree") {
@@ -54,8 +90,8 @@ class KDTreeSpec extends SpecImports {
       val tree = KDTree.point2DTree(Vector())
 
       When("adding points to the tree")
-      val p1 = Point(1, 1)
-      val p2 = Point(2, 2)
+      val p1 = RPoint(1, 1)
+      val p2 = RPoint(2, 2)
       val withPoints = tree.insert(p1).insert(p2)
 
       Then("both points should be in the tree")
@@ -67,7 +103,7 @@ class KDTreeSpec extends SpecImports {
     it ("should create a tree with a single element") {
 
       Given("a list containing a single point")
-      val p = Point(0, 0)
+      val p = RPoint(0, 0)
       val pv = Vector(p)
 
       When("creating the tree")
@@ -81,9 +117,9 @@ class KDTreeSpec extends SpecImports {
     it ("should add a children to a node") {
 
       Given("points (3, 3), (1, 3) and (5, 3)")
-      val p1 = Point(3, 3)
-      val p2 = Point(1, 3)
-      val p3 = Point(5, 3)
+      val p1 = RPoint(3, 3)
+      val p2 = RPoint(1, 3)
+      val p3 = RPoint(5, 3)
 
       When("creating the tree using the points")
       val tree = KDTree.point2DTree(Vector(p1, p2, p3))
@@ -107,8 +143,8 @@ class KDTreeSpec extends SpecImports {
     it ("should add an element e to a tree with an element sharing the initial property of e") {
 
       Given("two points with x value 4")
-      val p1 = Point(4, 5)
-      val p2 = Point(4, 6)
+      val p1 = RPoint(4, 5)
+      val p2 = RPoint(4, 6)
 
       When("creating the tree using the points")
       val tree = KDTree.point2DTree(Vector(p1)).insert(p2)
@@ -126,7 +162,7 @@ class KDTreeSpec extends SpecImports {
 
       When("adding a node that lies to the left of the root, and to the right of the roots left child")
       // Sorting based on the x axis when comparing to the root, and on the y axis when comparing to the child
-      val p4 = Point(2, 4)
+      val p4 = RPoint(2, 4)
       val newTree = tree.insert(p4)
 
       Then("the tree should contain the new point")
@@ -156,16 +192,16 @@ class KDTreeSpec extends SpecImports {
 
       Given("a tree where the lowest x value is in the leftmost leaf node")
       // Tree is built manually to ensure that every node ends up one the correct side
-      val tree = KDTree.point2DTree(Vector(Point(51, 75)))
-          .insert(Point(25, 40)).insert(Point(70, 70)) // First level
-          .insert(Point(10, 30)).insert(Point(35, 90)).insert(Point(55, 1)).insert(Point(60, 80)) // Second level
-          .insert(Point(1, 10)).insert(Point(50, 50))
+      val tree = KDTree.point2DTree(Vector(RPoint(51, 75)))
+          .insert(RPoint(25, 40)).insert(RPoint(70, 70)) // First level
+          .insert(RPoint(10, 30)).insert(RPoint(35, 90)).insert(RPoint(55, 1)).insert(RPoint(60, 80)) // Second level
+          .insert(RPoint(1, 10)).insert(RPoint(50, 50))
 
       When("finding the lowest x value")
       val minX = tree.min(1) // 1 = x, 2 = y
 
       Then("the lowest point should be (1, 10)")
-      minX.value should be (Point(1, 10))
+      minX.value should be (RPoint(1, 10))
 
     }
 
@@ -179,28 +215,28 @@ class KDTreeSpec extends SpecImports {
       val newRoot = tree.delete(root)
 
       Then("the new root should be (25, 50) and have l/r neighbors (10, 30)/(35, 25)")
-      newRoot.value should be (Point(25, 50))
-      newRoot.left.value should be (Point(10, 30))
-      newRoot.right.value should be (Point(35, 25))
+      newRoot.value should be (RPoint(25, 50))
+      newRoot.left.value should be (RPoint(10, 30))
+      newRoot.right.value should be (RPoint(35, 25))
 
       And("the point (35, 25) should only have the right neighbor (45, 35)")
-      val n35_25 = newRoot.get(Point(35, 25))
+      val n35_25 = newRoot.get(RPoint(35, 25))
       n35_25.left should be ('empty)
-      n35_25.right.value should be (Point(45, 35))
+      n35_25.right.value should be (RPoint(45, 35))
 
       And("the point (45, 35) should have the l/r neighbors (30, 45)/(55, 40)")
-      val n45_35 = newRoot.get(Point(45, 35))
-      n45_35.left.value should be (Point(30, 45))
-      n45_35.right.value should be (Point(55, 40))
+      val n45_35 = newRoot.get(RPoint(45, 35))
+      n45_35.left.value should be (RPoint(30, 45))
+      n45_35.right.value should be (RPoint(55, 40))
 
       And("the point (30, 45) should have the left neighbor (30, 35)")
-      val n30_45 = newRoot.get(Point(30, 45))
-      n30_45.left.value should be (Point(30, 35))
+      val n30_45 = newRoot.get(RPoint(30, 45))
+      n30_45.left.value should be (RPoint(30, 35))
       n30_45.right should be ('empty)
 
       And("the point (55, 40) should have the left neighbor (50, 30)")
-      val n55_40 = newRoot.get(Point(55, 40))
-      n55_40.left.value should be (Point(50, 30))
+      val n55_40 = newRoot.get(RPoint(55, 40))
+      n55_40.left.value should be (RPoint(50, 30))
       n55_40.right should be ('empty)
 
     }
@@ -232,7 +268,7 @@ class KDTreeSpec extends SpecImports {
       import f._
 
       When("checking if the point exists")
-      val isContained = tree.contains(Point(35, 25))
+      val isContained = tree.contains(RPoint(35, 25))
 
       Then("the result should be true")
       isContained should be (true)
@@ -246,7 +282,7 @@ class KDTreeSpec extends SpecImports {
       import f._
 
       When("checking if the point exists")
-      val isContained = tree.contains(Point(99, 99))
+      val isContained = tree.contains(RPoint(99, 99))
 
       Then("the result should be false")
       isContained should be (false)
@@ -256,11 +292,11 @@ class KDTreeSpec extends SpecImports {
     it ("should confirm that a value doesn't exists even though it partially contains some of the values attributes") {
 
       Given("a tree with the point (2,2)")
-      val root = Point(2, 2)
+      val root = RPoint(2, 2)
       val tree = KDTree.point2DTree(Vector(root))
 
       When("checking if it contains (2,3)")
-      val contains23 = tree.contains(Point(2, 3))
+      val contains23 = tree.contains(RPoint(2, 3))
 
       Then("the result should be false")
       contains23 should be (false)
@@ -283,14 +319,14 @@ class KDTreeSpec extends SpecImports {
 
       Then("the result should contain elements (35,25), (30,35), (45,35)")
       range should have size 3
-      range.toSet should be (Set(Point(35, 25), Point(30, 35), Point(45, 35)))
+      range.toSet should be (Set(RPoint(35, 25), RPoint(30, 35), RPoint(45, 35)))
 
     }
 
     it ("remove duplicates") {
 
       Given("a list of duplicate elements")
-      val elements = Vector(Point(3, 4), Point(3, 4), Point(3, 4), Point(3, 4))
+      val elements = Vector(RPoint(3, 4), RPoint(3, 4), RPoint(3, 4), RPoint(3, 4))
 
       When("creating a tree using the elements")
       val tree = KDTree.point2DTree(elements)
@@ -299,18 +335,18 @@ class KDTreeSpec extends SpecImports {
       tree.values should have length 1
 
       And("the root should be the specified point")
-      tree.value should be (Point(3, 4))
+      tree.value should be (RPoint(3, 4))
 
     }
 
     it ("should balance itself") {
 
       Given("a tree with a root, and the root having the rest of the tree in its right sub tree child")
-      val root = Point(0, 0)
-      val p1 = Point(1, 1)
-      val p2 = Point(2, 2)
-      val p3 = Point(3, 3)
-      val p4 = Point(5, 5)
+      val root = RPoint(0, 0)
+      val p1 = RPoint(1, 1)
+      val p2 = RPoint(2, 2)
+      val p3 = RPoint(3, 3)
+      val p4 = RPoint(5, 5)
       val tree = KDTree.point2DTree(Vector(root)).insert(p1).insert(p2).insert(p3).insert(p4)
 
       When("balancing the tree")
@@ -484,6 +520,238 @@ class KDTreeSpec extends SpecImports {
 
       Then("no rectangles should be found")
       inRange should be ('empty)
+
+    }
+
+    /*
+     *
+     * Nearest neighbor searches
+     *
+     */
+
+    it ("should not find neighbors in an empty tree") {
+
+      Given("an empty tree")
+      val empty = KDTree.point2DTree(Vector())
+
+      When("searching for nearest neighbors of some point")
+      val neighbors = empty.nearestNeighbor(3, Point(4, 12))
+
+      Then("no neighbors should be found")
+      neighbors should be ('empty)
+
+    }
+
+    it ("should throw an exception if a negative amount of neighbors are specified to be retrieved") {
+
+      Given("a tree")
+      val empty = KDTree.point2DTree(Vector())
+
+      When("trying to find the -1 nearest neighbors")
+      Then("an exception should be thrown")
+      val thrown = intercept[IllegalArgumentException] {
+        empty.nearestNeighbor(-1, Point(11, 22))
+      }
+      thrown.getMessage should be ("requirement failed: Number of neighbors sought must be >= 0.")
+
+    }
+
+    it ("should not find neighbors in a tree with no elements") {
+
+      Given("an empty tree")
+      val empty = KDTree.point2DTree(Vector())
+
+      When("trying to find the k nearest neighbors")
+      val result = empty.nearestNeighbor(5, Point(11, 22))
+
+      Then("no neighbors should be found")
+      result should be ('empty)
+
+    }
+
+    it ("should find 0 neighbors in a tree with elements") {
+
+      Given("a tree with a single point p")
+      val p = RPoint(4, 8)
+      val empty = KDTree.point2DTree(Vector(p))
+
+      When("searching for 0 neighbors")
+      val neighbors = empty.nearestNeighbor(0, Point(6, 12))
+
+      Then("no neighbors should be found")
+      neighbors should be ('empty)
+
+    }
+
+    it ("should find a neighbor in a tree with a single neighbor") {
+
+      Given("a tree with a single point p")
+      val p = RPoint(4, 8)
+      val empty = KDTree.point2DTree(Vector(p))
+
+      When("searching for nearest neighbors of some point that differs from the one in the tree")
+      val neighbors = empty.nearestNeighbor(3, Point(6, 12))
+
+      Then("p should be found")
+      neighbors should be (Vector(p))
+
+    }
+
+    it ("should find multiple neighbors of a point") {
+
+      Given("a tree with the points (6,2) and (6,3)")
+      val f = neighborTree
+      import f._
+
+      When("looking for the 2 nearest neighbors of (7,1)")
+      val neighbors = tree.nearestNeighbor(2, Point(7, 1))
+
+      Then("(6,2) and (6,3) should be found")
+      neighbors should have size 2
+      neighbors.toSet should be (Set(pc, pg))
+
+    }
+
+    it ("should find all neighbors when k is greater than the amount of points in the tree") {
+
+      Given("a tree with 7 points")
+      val f = neighborTree
+      import f._
+
+      When("looking for 8 neighbors")
+      val neighbors = tree.nearestNeighbor(8, Point(7, 1))
+
+      Then("every point should be found")
+      neighbors should have size 7
+      neighbors.toSet should be (Set(pa, pb, pc, pd, pe, pf, pg))
+
+    }
+
+    it ("should find two neighbors with the same distance to the search point") {
+
+      Given("a tree with two points within the same distance of (4,4)")
+      val p1 = RPoint(4, 0)
+      val p2 = RPoint(4, 8)
+      val tree = KDTree.point2DTree(Vector(p1, p2))
+
+      When("looking for 2 neighbors from (4,4)")
+      val neighbors = tree.nearestNeighbor(8, Point(4, 4))
+
+      Then("both points should be found")
+      neighbors should have size 2
+      neighbors.toSet should be (Set(p1, p2))
+
+    }
+
+    it ("should include points that overlap with the search point") {
+
+      Given("a tree with the point (1,11)")
+      val f = neighborTree
+      import f._
+      val point = pe
+
+      When("searching for the nearest neighbor of (1,11)")
+      val neighbors = tree.nearestNeighbor(1, point)
+
+      Then("(1,11) should be returned")
+      neighbors should be (Vector(point))
+
+    }
+
+    it ("should compute neighbors using rectangles") {
+
+      Given("a tree with 1x1 rectangles with points (6,9) and (9,6) closest to (8,7)")
+      val f = singleRectangleTree(1, 1)
+      import f._
+
+      When("searching for the nearest neighbor of (8,7)")
+      val neighbors = tree.nearestNeighbor(2, Rectangle(Point(8, 7), 1, 1))
+
+      Then("the rectangles (6,9) and (9,6) should be found")
+      neighbors should have size 2
+      neighbors.toSet should be (Set(rd, rf))
+
+    }
+
+    it ("should find multiple neighbors using rectangles") {
+
+      Given("a tree with 7 1x1 rectangles, having (1,11) furthest away from the search point")
+      val f = singleRectangleTree(1, 1)
+      import f._
+
+      When("searching for the 6 nearest neighbors of (10,0)")
+      val neighbors = tree.nearestNeighbor(6, Rectangle(Point(10, 0), 1, 1))
+
+      Then("every point except (1,11) should be found")
+      neighbors should have size 6
+      neighbors.toSet should be (Set(ra, rb, rc, rd, rf, rg))
+
+    }
+
+    it ("should search for neighbors that overlaps the search rectangle") {
+
+      Given("a tree with 1x1 rectangles and points (2,3), (6,3) and (6,9)")
+      val f = singleRectangleTree(1, 1)
+      import f._
+
+      When("searching for 4 neighbors using a search rectangle that overlaps those three points")
+      val search = Rectangle(rb.start, rf.stop)
+      val neighbors = tree.nearestNeighbor(4, search)
+
+      Then("the three points along with the nearest non-overlapping neighbor should be found")
+      neighbors should have size 4
+      neighbors.toSet should be (Set(rb, rc, rf, rg))
+
+    }
+
+    it ("should look for neighbors using multi-coordinate rectangles and no overlap") {
+
+      Given("a tree with rectangles (1,4)->(3,8) and (10,4)->(12,6) along with the 1x1 point (4,2)")
+      val r1 = Rectangle(Point(1,4), Point(3, 8))
+      val r2 = Rectangle(Point(10,4), Point(12, 6))
+      val p = Rectangle(Point(4,2), 1, 1)
+      val tree = KDTree.rectangleTree(Vector(r1, r2, p))
+
+      When("searching for the two nearest neighbors of the rectangle (4,4)->(9,5)")
+      val search = Rectangle(Point(4,4), Point(9, 5))
+      val neighbors = tree.nearestNeighbor(2, search)
+
+      Then("rectangles 1 and 2 should be returned despite p being closer to the search start point")
+      neighbors should have size 2
+      neighbors.toSet should be (Set(r1, r2))
+
+    }
+
+    it ("should only return some neighbor if two rectangles overlap at the same distance from the search point") {
+
+      Given("a tree with rectangles (1,4)->(3,8) and (1,5)->(3,8)")
+      val r1 = Rectangle(Point(1,4), Point(3, 8))
+      val r2 = Rectangle(Point(1,5), Point(3, 8))
+      val tree = KDTree.rectangleTree(Vector(r1, r2))
+
+      When("searching for the nearest neighbor of the 1x1 rectangle (4,9)")
+      val search = Rectangle(Point(4,9), 1, 1)
+      val neighbors = tree.nearestNeighbor(1, search)
+
+      Then("one of the rectangles should be returned")
+      neighbors should have size 1
+      assert(neighbors == Vector(r1) || neighbors == Vector(r2))
+
+    }
+
+    it ("should approximate the k nearest neighbors") {
+
+      // Write more tests on this if needed, this is just to ensure that it runs
+      Given("a tree")
+      val f = singleRectangleTree(1, 1)
+      import f._
+
+      When("finding the 4 nearest neighbors to some point")
+      val neighbors = tree.nearestNeighborApproximation(4, Rectangle(Point(7, 11), 4, 3), 2)
+
+      Then("the neighbors should be returned")
+      neighbors should have size 4
+      neighbors.toSet should be (Set(rd, re, rf, rg))
 
     }
 

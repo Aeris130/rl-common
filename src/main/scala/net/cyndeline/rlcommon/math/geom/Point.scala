@@ -1,5 +1,7 @@
 package net.cyndeline.rlcommon.math.geom
 
+import spire.math.Rational
+
 /**
  * A pair of x/y coordinates.
  *
@@ -32,8 +34,12 @@ class Point(val x: Int, val y: Int) extends PointInterface[Point, Int] {
   override def *(s: Int): Point = this * (s, s)
   override def *(p: Point): Point = this * (p.x, p.y)
 
+  override def move(angle: Rational, distance: Rational): Point = {
+    Point(RPoint(this).move(angle, distance))
+  }
+
   override def crossProduct(p: Point): Int = DPoint(this).crossProduct(DPoint(p)).toInt
-  override def distanceTo(p: Point): Double = DPoint(this).distanceTo(DPoint(p))
+  override def distanceTo(p: Point): Rational = DPoint(this).distanceTo(DPoint(p))
 
   override def equals(other: Any): Boolean = other match {
     case p: Point => x == p.x && y == p.y
@@ -49,4 +55,17 @@ object Point {
   def apply(x: Int, y: Int): Point = new Point(x, y)
   def apply(xy: (Int, Int)): Point = new Point(xy._1, xy._2)
   def apply(point: DPoint): Point = new Point(point.x.toInt, point.y.toInt)
+  def apply(r: RPoint): Point = new Point(r.x.intValue(), r.y.intValue())
+
+  /**
+    * @return A basic ordering that sorts points based on x values, then y values.
+    */
+  def coordinateOrdering: Ordering[Point] = new Ordering[Point]() {
+    override def compare(a: Point, b: Point): Int = if (a.x < b.x) -1
+    else if (b.x < a.x) 1
+    else if (a.y < b.y) -1
+    else if (b.y < a.y) 1
+    else 0
+  }
+
 }

@@ -1,5 +1,7 @@
 package net.cyndeline.rlcommon.math.geom
 
+import spire.math.Rational
+
 import scala.language.implicitConversions
 
 /**
@@ -20,9 +22,13 @@ class DPoint(val x: Double, val y: Double) extends PointInterface[DPoint, Double
   override def *(s: Double): DPoint = this * (s, s)
   override def *(p: DPoint): DPoint = this * (p.x, p.y)
 
+  override def move(angle: Rational, distance: Rational): DPoint = {
+    DPoint(RPoint(this).move(angle, distance))
+  }
+
   override def crossProduct(p: DPoint): Double = (x * p.y) - (y * p.x)
 
-  override def distanceTo(p: DPoint): Double = {
+  override def distanceTo(p: DPoint): Rational = {
     val dx = x - p.x
     val dy = y - p.y
     Math.sqrt(dx * dx + dy * dy)
@@ -45,4 +51,5 @@ object DPoint {
   def apply(x: Double, y: Double) = new DPoint(x, y)
   def apply(p: Point) = new DPoint(p.x, p.y)
   def apply(xy: (Double, Double)) = new DPoint(xy._1, xy._2)
+  def apply(r: RPoint) = new DPoint(r.x.doubleValue(), r.y.doubleValue())
 }

@@ -1,6 +1,8 @@
 package net.cyndeline.rlcommon.math.geom.spatialIndex.kdTree
 
 import net.cyndeline.rlcommon.math.geom.Rectangle
+import net.cyndeline.rlcommon.math.geom.spatialIndex.common.ElementProperty
+import spire.math.Rational
 
 /**
   * Allows a KD tree to perform lookup on orthogonal rectangles, by treating them as a 4-dimensional point.
@@ -26,7 +28,7 @@ class RectangleProperty extends ElementProperty[Rectangle] with RangeProperty[Re
   /**
     * @return Min x, min y, max x, max y. All values are inclusive.
     */
-  override def value(element: Rectangle, dimension: Int): Int = dimension match {
+  override def value(element: Rectangle, dimension: Int): Rational = dimension match {
     case 1 => element.start.x
     case 2 => element.start.y
     case 3 => element.start.x + element.width - 1
@@ -34,6 +36,18 @@ class RectangleProperty extends ElementProperty[Rectangle] with RangeProperty[Re
     case _ =>
       unspecified(dimension, element)
       0
+  }
+
+  /** @return the Distance between two rectangles. */
+  override def distance(a: Rectangle, b: Rectangle): Rational = a.shortestDistance(b)
+
+  /** Computes the distance between two rectangles in some dimension. To represent the rectangles area, both coordinates
+    * on the same axis must be used for each dimension.
+    * @return The shortest distance between two rectangles on some axis.
+    */
+  override def axisDistance(a: Rectangle, b: Rectangle, dimension: Int): Rational = dimension match {
+    case 1 | 3 => dist(a.start.x, a.stop.x, b.start.x, b.stop.x)
+    case 2 | 4 => dist(a.start.y, a.stop.y, b.start.y, b.stop.y)
   }
 
   /**
@@ -76,4 +90,12 @@ class RectangleProperty extends ElementProperty[Rectangle] with RangeProperty[Re
   private def unspecified(d: Int, element: Rectangle): Boolean = {
     throw new Error("Unspecified dimension " + d + " for shape " + element + ", only dimensions 1 to 4 are supported.")
   }
+
+  private def dist(aLow: Rational, aHigh: Rational, bLow: Rational, bHigh: Rational): Rational =
+    if (aHigh >= bLow && bHigh >= aLow) // Overlap
+      0
+    else if (aHigh < bLow)
+      bLow - aHigh
+    else
+      aLow - bHigh
 }

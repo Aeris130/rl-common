@@ -1,10 +1,11 @@
 package net.cyndeline.rlcommon.math.geom
 
 import net.cyndeline.rlcommon.SpecImports
+import spire.math.Rational
 
 class EllipseSpec extends SpecImports {
 
-  private def makeEllipse(center: (Double, Double), rh: Int, rv: Int) = new Ellipse(DPoint(center), rh, rv, 0)
+  private def makeEllipse(center: (Rational, Rational), rh: Int, rv: Int) = new Ellipse(RPoint(center), rh, rv, 0)
 
   describe("Ellipse") {
 
@@ -20,7 +21,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((3, 4), 1, 2)
 
       When("checking if the line (1,6) -> (9,8) intersects it")
-      val intersection = ellipse.intersectsLine(DPoint(1, 6), DPoint(9, 8))
+      val intersection = ellipse.intersectsLine(RPoint(1, 6), RPoint(9, 8))
 
       Then("no result should be given")
       intersection should be ('empty)
@@ -33,7 +34,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 7, 7)
 
       When("checking if the line (2,3) -> (5,3) intersects it")
-      val intersection = ellipse.intersectsLine(DPoint(2, 3), DPoint(5, 3))
+      val intersection = ellipse.intersectsLine(RPoint(2, 3), RPoint(5, 3))
 
       Then("no result should be given")
       intersection should be ('empty)
@@ -46,11 +47,11 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((3, 4), 2, 1)
 
       When("checking if the line (0,4) -> (3,4) intersects it")
-      val intersection = ellipse.intersectsLine(DPoint(0, 4), DPoint(3, 4)).get
+      val intersection = ellipse.intersectsLine(RPoint(0, 4), RPoint(3, 4)).get
 
       Then("the point (1, 4) should be returned")
       intersection should have size 1
-      intersection.head should be (DPoint(1, 4))
+      intersection.head should be (RPoint(1, 4))
 
     }
 
@@ -60,11 +61,11 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((3, 4), 2, 1)
 
       When("checking if the line (3,4) -> (0,4) intersects it")
-      val intersection = ellipse.intersectsLine(DPoint(3, 4), DPoint(0, 4)).get
+      val intersection = ellipse.intersectsLine(RPoint(3, 4), RPoint(0, 4)).get
 
       Then("the point (1, 4) should be returned")
       intersection should have size 1
-      intersection.head should be (DPoint(1, 4))
+      intersection.head should be (RPoint(1, 4))
 
     }
 
@@ -74,12 +75,15 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 1, 3)
 
       When("checking if the line (4,10) -> (4,0) intersects it")
-      val intersection = ellipse.intersectsLine(DPoint(4, 10), DPoint(4, 0)).get
+      val intersection = ellipse.intersectsLine(RPoint(4, 10), RPoint(4, 0)).get
 
       Then("points (4,7) and (4,1) should be returned")
       intersection should have size 2
-      intersection should contain (DPoint(4, 7))
-      intersection should contain (DPoint(4, 1))
+      val approxDoubleValues = intersection.map(p => (p.x.doubleValue(), p.y.doubleValue()))
+      val eps = 0.1E-7
+      def fuzzy(d: Double, r: Rational) = Math.abs(r.toDouble - d) < eps
+      assert(approxDoubleValues.exists(t => fuzzy(4.0, t._1) && fuzzy(7.0, t._2)))
+      assert(approxDoubleValues.exists(t => fuzzy(4.0, t._1) && fuzzy(1.0, t._2)))
 
     }
 
@@ -89,11 +93,11 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 1, 3)
 
       When("checking if the line (1,7) -> (8,7) intersects it")
-      val intersection = ellipse.intersectsLine(DPoint(1, 7), DPoint(8, 7)).get
+      val intersection = ellipse.intersectsLine(RPoint(1, 7), RPoint(8, 7)).get
 
       Then("the point (4, 7) should be returned")
       intersection should have size 1
-      intersection.head should be (DPoint(4, 7))
+      intersection.head should be (RPoint(4, 7))
 
     }
 
@@ -103,11 +107,11 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 1, 3)
 
       When("checking if the line (1,1) -> (8,1) intersects it")
-      val intersection = ellipse.intersectsLine(DPoint(1, 1), DPoint(8, 1)).get
+      val intersection = ellipse.intersectsLine(RPoint(1, 1), RPoint(8, 1)).get
 
       Then("the point (4, 1) should be returned")
       intersection should have size 1
-      intersection.head should be (DPoint(4, 1))
+      intersection.head should be (RPoint(4, 1))
 
     }
 
@@ -123,7 +127,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 1, 3)
 
       When("checking if the point (2, 4) lies within the ellipse")
-      val liesWithin = ellipse.containsPoint(DPoint(2, 4))
+      val liesWithin = ellipse.containsPoint(RPoint(2, 4))
 
       Then("the result should be false")
       liesWithin should be (false)
@@ -136,7 +140,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 1, 3)
 
       When("checking if the point (4, 2) lies within the ellipse")
-      val liesWithin = ellipse.containsPoint(DPoint(4, 2))
+      val liesWithin = ellipse.containsPoint(RPoint(4, 2))
 
       Then("the result should be true")
       liesWithin should be (true)
@@ -149,7 +153,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 1, 3)
 
       When("checking if the point (4,1) lies within the ellipse")
-      val liesWithin = ellipse.containsPoint(DPoint(4, 1))
+      val liesWithin = ellipse.containsPoint(RPoint(4, 1))
 
       Then("the result should be true")
       liesWithin should be (true)
@@ -169,7 +173,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 3, 3)
 
       When("checking if a rectangle between (9, 9) and (12, 12) intersects it")
-      val status = ellipse.intersectsRectangle(DPoint(9, 9), DPoint(12, 12))
+      val status = ellipse.intersectsRectangle(RPoint(9, 9), RPoint(12, 12))
 
       Then("the rectangle should be outside")
       status should be (Outside)
@@ -182,7 +186,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 2, 2)
 
       When("checking if a rectangle between (0, 0) and (4, 4) intersects it")
-      val status = ellipse.intersectsRectangle(DPoint(0, 0), DPoint(4, 4))
+      val status = ellipse.intersectsRectangle(RPoint(0, 0), RPoint(4, 4))
 
       Then("the rectangle should be intersecting")
       status should be (Intersects)
@@ -195,7 +199,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 2, 2)
 
       When("checking if a rectangle with its corner in (4, 2) intersects it")
-      val status = ellipse.intersectsRectangle(DPoint(0, 0), DPoint(4, 2))
+      val status = ellipse.intersectsRectangle(RPoint(0, 0), RPoint(4, 2))
 
       Then("the rectangle should be intersecting")
       status should be (Intersects)
@@ -208,7 +212,7 @@ class EllipseSpec extends SpecImports {
       val ellipse = makeEllipse((4, 4), 7, 7)
 
       When("checking if a rectangle between (5, 5) and (6, 6) intersects it")
-      val status = ellipse.intersectsRectangle(DPoint(5, 5), DPoint(6, 6))
+      val status = ellipse.intersectsRectangle(RPoint(5, 5), RPoint(6, 6))
 
       Then("the rectangle should be inside")
       status should be (Inside)
