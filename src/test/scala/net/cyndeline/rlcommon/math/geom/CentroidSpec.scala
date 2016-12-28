@@ -9,23 +9,23 @@ class CentroidSpec extends SpecImports {
     it ("should compute the centroid of a set of points") {
 
       Given("the points (2,1), (2,3), (4,1), (4,3)")
-      val p1 = RPoint(2, 1)
-      val p2 = RPoint(2, 3)
-      val p3 = RPoint(4, 1)
-      val p4 = RPoint(4, 3)
+      val p1 = Point(2, 1)
+      val p2 = Point(2, 3)
+      val p3 = Point(4, 1)
+      val p4 = Point(4, 3)
 
       When("computing their centroids")
       val centroid = Centroid.fromPoints(p1, p2, p3, p4)
 
       Then("the centroid should be (3,2)")
-      centroid should be (RPoint(3, 2))
+      centroid should be (Point(3, 2))
 
     }
 
     it ("should compute the centroid of a set of identical points") {
 
       Given("5 identical points")
-      val p1 = RPoint(3, 2)
+      val p1 = Point(3, 2)
       //...
 
       When("computing their centroids")
@@ -39,7 +39,7 @@ class CentroidSpec extends SpecImports {
     it ("should throw an exception when computing centroids from a single point") {
 
       Given("a single point")
-      val p = RPoint(0, 0)
+      val p = Point(0, 0)
 
       When("computing its centroids")
 

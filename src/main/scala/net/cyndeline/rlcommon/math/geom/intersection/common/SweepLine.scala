@@ -244,7 +244,7 @@ object SweepLine {
           if (l.segment.isVertical)
             (l.segment.source.y, l.segment.target.y)
           else {
-            val yValue = l.segment.y(x)
+            val yValue = l.segment.y(x.toDouble)
             (yValue, yValue)
           }
         }

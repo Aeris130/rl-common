@@ -1,7 +1,6 @@
 package net.cyndeline.rlcommon.math
 
 import net.cyndeline.rlcommon.SpecImports
-import spire.math.Rational
 
 class NormalizeSpec extends SpecImports {
 
@@ -18,7 +17,7 @@ class NormalizeSpec extends SpecImports {
       val normalized = Normalize(i, min, max)
 
       Then("the normalized value should be 0.3")
-      normalized should be (Rational(0.3))
+      normalized should be (0.3)
 
     }
 
@@ -33,7 +32,7 @@ class NormalizeSpec extends SpecImports {
       val normalized = Normalize(i, min, max)
 
       Then("the normalized value should be 0")
-      normalized should be (Rational.zero)
+      normalized should be (0)
 
     }
 

@@ -356,7 +356,7 @@ class SweepLineSpec extends SpecImports {
 
   private def sweepLine(segments: Segment[Line]*): SweepLine[Line] = {
     require(segments.nonEmpty, "Tried to instantiate empty sweep line")
-    val coordinates: Seq[RPoint] = segments.flatMap(s => Set(s.start, s.stop))
+    val coordinates: Seq[Point] = segments.flatMap(s => Set(s.start, s.stop))
     val minX = coordinates.minBy(_.x).x
     val minY = coordinates.minBy(_.y).x
     var line = SweepLine[Line](RPoint(minX, minY), segments.size)

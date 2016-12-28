@@ -8,21 +8,22 @@ import spire.math.Rational
   * @param start Start point for this line segment.
   * @param stop end point for this line segment, inclusive.
   */
-class Line(val start: RPoint, val stop: RPoint) {
+class Line(val start: Point, val stop: Point) {
+
   val length: Double = {
-    val width = (start.x - stop.x).abs + 1
-    val height = (start.y - stop.y).abs + 1
+    val width = Math.abs(start.x - stop.x) + 1
+    val height = Math.abs(start.y - stop.y) + 1
     val l = width * width + height * height
-    Math.sqrt(l.toDouble)
+    Math.sqrt(l)
   }
 
   /**
     * @return An approximation of angle (in degrees) between the line and the horizontal axis.
     */
-  def angle: Rational = {
+  def angle: Double = {
     val deltaX = stop.x - start.x
     val deltaY = stop.y - start.y
-    Math.atan2(deltaY.toDouble, deltaX.toDouble) * 180 / Math.PI
+    Math.atan2(deltaY, deltaX) * 180 / Math.PI
   }
 
   /**
@@ -45,10 +46,10 @@ class Line(val start: RPoint, val stop: RPoint) {
   /**
     * @return The slope for this line, unspecified for vertical lines.
     */
-  def slope: Rational = {
+  def slope: Double = {
     assert(start != stop, "Attempted to compute slope for a single-point segment.")
     assert(start.x != stop.x, "Attempted to compute slope for a vertical segment.")
-    (stop.y - start.y) / (stop.x - start.x)
+    (stop.y - start.y).toDouble / (stop.x - start.x)
   }
 
   /**
@@ -56,7 +57,7 @@ class Line(val start: RPoint, val stop: RPoint) {
     * @param other Another line.
     * @return The shortest distances between the lines, or 0 if they intersect or overlap at some coordinate.
     */
-  def distanceTo(other: Line): Rational = {
+  def distanceTo(other: Line): Double = {
 
     // For two 2D lines AB and CD, the shortest distance is min(AB:C, AB:D, CD:A, CD:B)
     this.distanceTo(other.start).min(
@@ -73,22 +74,22 @@ class Line(val start: RPoint, val stop: RPoint) {
     * @param p A point.
     * @return The shortest distance from this line to the point, or 0 if the point overlaps the line.
     */
-  def distanceTo(p: RPoint): Rational = {
-    def sqr(x: Rational) = x * x
-    def dist2(a: RPoint, b: RPoint) = sqr(a.x - b.x) + sqr(a.y - b.y)
-    def distToSegmentSquared(p: RPoint, start: RPoint, stop: RPoint): Rational = {
+  def distanceTo(p: Point): Double = {
+    def sqr(x: Double) = x * x
+    def dist2(a: DPoint, b: DPoint) = sqr(a.x - b.x) + sqr(a.y - b.y)
+    def distToSegmentSquared(p: DPoint, start: DPoint, stop: DPoint): Double = {
       val l2 = dist2(start, stop)
       if (l2 == 0) {
         dist2(p, start)
       } else {
         val t1 = ((p.x - start.x) * (stop.x - start.x) + (p.y - start.y) * (stop.y - start.y)) / l2
-        val t2 = t1.min(1).max(0)
-        val dp = RPoint(start.x + t2 * (stop.x - start.x), start.y + t2 * (stop.y - start.y))
+        val t2 = Math.max(Math.min(t1, 1), 0)
+        val dp = DPoint(start.x + t2 * (stop.x - start.x), start.y + t2 * (stop.y - start.y))
         dist2(p, dp)
       }
     }
 
-    Rational(Math.sqrt(distToSegmentSquared(p, this.start, this.stop).toDouble))
+    Math.sqrt(distToSegmentSquared(p, this.start, this.stop))
   }
 
   /**
@@ -140,14 +141,20 @@ class Line(val start: RPoint, val stop: RPoint) {
     i.isDefined && i.get.isInterval
   }
 
-  def containsX(x: Rational): Boolean = start.x.min(stop.x) <= x && x <= start.x.max(stop.x)
-  def containsY(y: Rational): Boolean = start.y.min(stop.y) <= y && y <= start.y.max(stop.y)
+  def containsX(x: Double): Boolean = Math.min(start.x, stop.x) <= x && x <= Math.max(start.x, stop.x)
+  def containsY(y: Double): Boolean = Math.min(start.y, stop.y) <= y && y <= Math.min(start.y, stop.y)
 
   /**
     * @param p A point to check overlap for.
     * @return True if the point lies on this line segment, otherwise false.
     */
-  def containsPoint(p: Point): Boolean = containsPoint(RPoint(p))
+  def containsPoint(p: Point): Boolean = containsPoint(DPoint(p))
+
+  /**
+    * @param p A point to check overlap for.
+    * @return True if the point lies on this line segment, otherwise false.
+    */
+  def containsPoint(p: DPoint): Boolean = containsPoint(RPoint(p))
 
   /**
     * @param p A point to check overlap for.
@@ -157,21 +164,21 @@ class Line(val start: RPoint, val stop: RPoint) {
 
     /* Special case to handle single-point segments */
     if (this.start == this.stop) {
-      return this.start == p
+      return RPoint(this.start) == p
     }
 
-    val a = start
-    val b = stop
+    val a = RPoint(start)
+    val b = RPoint(stop)
     val c = p
 
     val crossProduct = (c.y - a.y) * (b.x - a.x) - (c.x - a.x) * (b.y - a.y)
     val dotProduct = (c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)
-    val squaredLengthBA = (b.x - a.x)*(b.x - a.x) + (b.y - a.y)*(b.y - a.y)
+    val squaredLengthBA = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)
 
     if (crossProduct.abs > Rational.zero) {
       false
 
-    } else if (dotProduct < 0) {
+    } else if (dotProduct < Rational.zero) {
       false
 
     } else if (dotProduct > squaredLengthBA) {
@@ -188,7 +195,7 @@ class Line(val start: RPoint, val stop: RPoint) {
     * @return n coordinate points, signifying sub intervals along the original line. If this line has equal start and
     *         stop coordinates, only a single coordinate will be returned.
     */
-  def split(n: Int): Vector[RPoint] = {
+  def split(n: Int): Vector[DPoint] = {
     require(n > 1, s"The number of splits must be > 1 (currently $n).")
     if (start == stop)
       return Vector(start)
@@ -196,7 +203,7 @@ class Line(val start: RPoint, val stop: RPoint) {
     // Actually, this formula computes the points that are 1/n away from the end point, but not the end point itself.
     // To include it, compute the n - 1 points instead.
     val d = n - 1
-    (for (i <- 0 until n) yield RPoint(start.x + (Rational(i, d) * (stop.x - start.x)), start.y + (Rational(i, d) * (stop.y - start.y)))).toVector
+    (for (i <- 0 until n) yield DPoint(start.x + ((i.toDouble / d) * (stop.x - start.x)), start.y + ((i.toDouble / d) * (stop.y - start.y)))).toVector
   }
 
   /**
@@ -208,7 +215,7 @@ class Line(val start: RPoint, val stop: RPoint) {
     * @param x An x value along this line.
     * @return The corresponding y-value for the x coordinate. Only defined for non-vertical lines.
     */
-  def y(x: Rational): Rational = {
+  def y(x: Double): Double = {
     require(start.x != stop.x || start == stop, "Vertical segments does not have a single y-value defined for any given x value.")
     require(x >= start.x && x <= stop.x, "Attempted to compute y value for an x-value outside the lines start and stop coordinates.")
     if (start == stop) {
@@ -227,10 +234,10 @@ class Line(val start: RPoint, val stop: RPoint) {
     *         the single coordinate where they intersect is returned.
     */
   private def intersectionPoint(other: Line): Option[LineIntersection] = {
-    val a = start
-    val b = stop
-    val c = other.start
-    val d = other.stop
+    val a = RPoint(start)
+    val b = RPoint(stop)
+    val c = RPoint(other.start)
+    val d = RPoint(other.stop)
 
     // signs of areas correspond to which side of ab points c and d are
     val a1 = signed2DTriArea(a,b,d); // Compute winding of abd (+ or -)
@@ -247,7 +254,7 @@ class Line(val start: RPoint, val stop: RPoint) {
       {
         // Segments intersect. Find intersection point along L(t) = a + t * (b - a).
         val t = a3 / (a3 - a4)
-        val p = a + ((b - a) * t) // the point of intersection
+        val p = RPoint(a) + (RPoint(b - a) * t) // the point of intersection
         return Some(LineIntersection(p))
       }
     }
@@ -258,7 +265,7 @@ class Line(val start: RPoint, val stop: RPoint) {
   }
 
   /* Checks if the product of two rationals are negative without multiplying them, as that may cause overflow. */
-  private def productIsNegative(a: Rational, b: Rational) = (a.signum < Rational.zero || b.signum < Rational.zero) && (a.signum > Rational.zero || b.signum > Rational.zero)
+  private def productIsNegative(a: Rational, b: Rational) = (a.signum < 0 || b.signum < 0) && (a.signum > 0 || b.signum > 0)
 
   /**
     * @param other Another line segment to check intersection for.
@@ -267,17 +274,17 @@ class Line(val start: RPoint, val stop: RPoint) {
   private def intersectionInterval(other: Line): Option[LineIntersection] = {
 
     /* Triangular area. */
-    def area2(a: RPoint, b: RPoint, c: RPoint): Rational = ((b.x - a.x) * (c.y - a.y)) - ((c.x - a.x) * (b.y - a.y))
-    def collinear(a: RPoint, b: RPoint, c: RPoint): Boolean = area2(a, b, c) == Rational.zero
+    def area2(a: Point, b: Point, c: Point): Double = ((b.x - a.x) * (c.y - a.y)) - ((c.x - a.x) * (b.y - a.y))
+    def collinear(a: Point, b: Point, c: Point): Boolean = area2(a, b, c) == 0
 
     /* Checks if c is between a and b. */
-    def between(a: RPoint, b: RPoint, c: RPoint): Boolean = if (a.x != b.x) {
+    def between(a: Point, b: Point, c: Point): Boolean = if (a.x != b.x) {
       (a.x <= c.x && c.x <= b.x) || (b.x <= c.x && c.x <= a.x)
     } else {
       (a.y <= c.y && c.y <= b.y) || (b.y <= c.y && c.y <= a.y)
     }
 
-    def lowest(a: RPoint, b: RPoint) =
+    def lowest(a: Point, b: Point) =
       if (a.x < b.x) a
       else if (b.x < a.x) b
       else if (a.y < b.y) a
@@ -290,7 +297,7 @@ class Line(val start: RPoint, val stop: RPoint) {
     val d = if (c == other.start) other.stop else other.start
 
     /* Special case to prevent the code below from bugging out when one segment has identical start/stop coordinates. */
-    val identical: Option[RPoint] = if (a == b) Some(a) else if (c == d) Some(c) else None
+    val identical: Option[Point] = if (a == b) Some(a) else if (c == d) Some(c) else None
     if (identical.isDefined) {
       // Have to check both anyways...
       if (this.containsPoint(identical.get) && other.containsPoint(identical.get)) {
@@ -322,16 +329,16 @@ class Line(val start: RPoint, val stop: RPoint) {
 
   }
 
-  private def pointsAreCollinear(a: RPoint, b: RPoint, c: RPoint): Boolean = (b.y - a.y) * (c.x - b.x) == (c.y - b.y) * (b.x - a.x)
+  private def pointsAreCollinear(a: Point, b: Point, c: Point): Boolean = (b.y - a.y) * (c.x - b.x) == (c.y - b.y) * (b.x - a.x)
 
   private def signed2DTriArea(a: RPoint, b: RPoint, c: RPoint): Rational = (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x)
 
-  private def buildIntersectionSegment(a: RPoint, b: RPoint) = {
+  private def buildIntersectionSegment(a: Point, b: Point) = {
     val smallestFirst = orderPoints(a, b)
     Some(LineIntersection(smallestFirst._1, smallestFirst._2))
   }
 
-  private def orderPoints(a: RPoint, b: RPoint): (RPoint, RPoint) = {
+  private def orderPoints(a: Point, b: Point): (Point, Point) = {
     if (a.x < b.x) (a, b)
     else if (a.y < b.y) (a, b)
     else if (b.x < a.x) (b, a)
@@ -354,7 +361,6 @@ class Line(val start: RPoint, val stop: RPoint) {
   * Factory object.
   */
 object Line {
-  def apply(from: RPoint, to: RPoint): Line = new Line(from, to)
-  def apply(from: Point, to: Point): Line = apply(RPoint(from), RPoint(to))
-  def apply(from: (Rational, Rational), to: (Rational, Rational)) = new Line(RPoint(from), RPoint(to))
+  def apply(from: Point, to: Point): Line = new Line(from, to)
+  def apply(from: (Int, Int), to: (Int, Int)): Line = apply(Point(from), Point(to))
 }

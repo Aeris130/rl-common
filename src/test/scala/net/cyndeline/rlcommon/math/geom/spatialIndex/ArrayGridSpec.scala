@@ -2,10 +2,8 @@ package net.cyndeline.rlcommon.math.geom.spatialIndex
 
 import net.cyndeline.rlcommon.SpecImports
 import net.cyndeline.rlcommon.math.geom.Line
-import spire.math.Rational
 
 class ArrayGridSpec extends SpecImports {
-  private implicit def toRat(t: (Int, Int)): (Rational, Rational) = (Rational(t._1), Rational(t._2))
 
   /* A grid with a single cell, containing three segments */
   private def singleCellGrid = new {

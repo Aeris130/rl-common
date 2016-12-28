@@ -2,8 +2,7 @@ package net.cyndeline.rlcommon.math.geom.spatialIndex.kdTree
 
 import net.cyndeline.rlcommon.collections.BoundedPriorityQueue
 import net.cyndeline.rlcommon.math.geom.spatialIndex.common.ElementProperty
-import net.cyndeline.rlcommon.math.geom.{RPoint, Rectangle}
-import spire.math.Rational
+import net.cyndeline.rlcommon.math.geom.{Point, Rectangle}
 
 import Ordering.Implicits._
 
@@ -194,11 +193,11 @@ abstract class KDTree[E : Ordering, R](prop: ElementProperty[E], rangeProp: Rang
     knn(k, p, approx)
   }
 
-  private def knn(k: Int, p: E, approximation: Rational): Vector[E] = {
+  private def knn(k: Int, p: E, approximation: Double): Vector[E] = {
     if (k == 0)
       return Vector()
 
-    case class PrioStore(e: E, priority: Rational)
+    case class PrioStore(e: E, priority: Double)
     val ordering = new Ordering[PrioStore]() {
       override def compare(x: PrioStore, y: PrioStore): Int = {
         val order = x.priority.compare(y.priority)
@@ -352,7 +351,7 @@ object KDTree {
   /**
     * @return A tree with pre-set properties for 2D integer points.
     */
-  def point2DTree(elements: Vector[RPoint]): KDTree[RPoint, Rectangle] = {
+  def point2DTree(elements: Vector[Point]): KDTree[Point, Rectangle] = {
     val elementAndRange = new Point2DProperty()
     apply(elements, elementAndRange, elementAndRange)
   }

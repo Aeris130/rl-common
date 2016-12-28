@@ -1,7 +1,5 @@
 package net.cyndeline.rlcommon.math.geom
 
-import spire.math.Rational
-
 /**
  * A pair of x/y coordinates.
  *
@@ -9,7 +7,7 @@ import spire.math.Rational
  * @param x The x dimension on the grid.
  * @param y The y dimension on the grid.
  */
-class Point(val x: Int, val y: Int) extends PointInterface[Point, Int] {
+class Point(val x: Int, val y: Int) extends Point2D[Point, Int] {
 
   /**
    * @param t A tuple containing the x and y coordinate the create a new point from.
@@ -34,12 +32,38 @@ class Point(val x: Int, val y: Int) extends PointInterface[Point, Int] {
   override def *(s: Int): Point = this * (s, s)
   override def *(p: Point): Point = this * (p.x, p.y)
 
-  override def move(angle: Rational, distance: Rational): Point = {
-    Point(RPoint(this).move(angle, distance))
+  override def move(angle: Double, distance: Double): Point = {
+    val newC = Point2D.move(x, y, angle, distance)
+
+    /* Round the new movement values away from the current coordinate if
+     * the difference is less than 1.
+     */
+    def round(newValue: Double, old: Int): Int = {
+      if (newValue > old + 1 || newValue < old - 1)
+        newValue.toInt
+      else {
+        if (newValue > old)
+          Math.ceil(newValue).toInt
+        else if (newValue < old)
+          Math.floor(newValue).toInt
+        else
+          newValue.toInt // Equal, doesn't matter
+      }
+    }
+    Point(round(newC._1, x), round(newC._2.toInt, y))
   }
 
-  override def crossProduct(p: Point): Int = DPoint(this).crossProduct(DPoint(p)).toInt
-  override def distanceTo(p: Point): Rational = DPoint(this).distanceTo(DPoint(p))
+  override def crossProduct(p: Point): Int = Point2D.crossProduct(x, y, p.x, p.y).toInt
+  override def distanceTo(p: Point): Double = Point2D.distanceTo(x, y, p.x, p.y)
+
+  override def angleTo(p: Point): Double = {
+    val angle = Math.toDegrees(Math.atan2(p.y - y, p.x - x))
+    if (angle < 0){
+      angle + 360
+    } else {
+      angle
+    }
+  }
 
   override def equals(other: Any): Boolean = other match {
     case p: Point => x == p.x && y == p.y
@@ -49,6 +73,12 @@ class Point(val x: Int, val y: Int) extends PointInterface[Point, Int] {
   override def hashCode: Int = x ^ (y << 32)
 
   override def toString: String = "Point(" + x + ", " + y + ")"
+
+  override def compare(that: Point): Int = if (this.x < that.x) -1
+    else if (that.x < this.x) 1
+    else if (this.y < that.y) -1
+    else if (that.y < this.y) 1
+    else 0
 }
 
 object Point {

@@ -34,18 +34,18 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(Segment.comp
       return belowTieBreaker(other)
 
     else if (!this.isVertical && other.isVertical)
-      return this.y(x) < other.start.y
+      return this.y(x.toDouble) < other.start.y
 
     else if (this.isVertical && !other.isVertical) {
-      return !(other.y(x) < this.start.y)
+      return !(other.y(x.toDouble) < this.start.y)
     }
 
-    val thisY = this.y(x)
-    val otherY = other.y(x)
+    val thisY = this.y(x.toDouble)
+    val otherY = other.y(x.toDouble)
 
     thisY < otherY || (thisY == otherY && {
-      val pIsThisSource = RPoint(x, thisY) == source
-      val pIsOtherSource = RPoint(x, otherY) == other.source
+      val pIsThisSource = x.toInt == source.x && thisY.toInt == source.y
+      val pIsOtherSource = x.toInt == other.source.x && otherY.toInt == other.source.y
 
       if (this.slope > other.slope && (pIsThisSource || pIsOtherSource)) {
         true
@@ -123,14 +123,14 @@ class Segment[L <: Line](val id: Int, val original: L) extends Line(Segment.comp
 
 object Segment {
   def apply[L <: Line](id: Int, original: L): Segment[L] = new Segment[L](id, original)
-  def apply(id: Int, source: (Int, Int), target: (Int, Int)): Segment[Line] = new Segment(id, Line((Rational(source._1), Rational(source._2)), (Rational(target._1), Rational(target._2))))
+  def apply(id: Int, source: (Int, Int), target: (Int, Int)): Segment[Line] = new Segment(id, Line(Point(source), Point(target)))
   def apply(id: Int, source: Point, target: Point): Segment[Line] = new Segment(id, Line(source, target))
 
-  def computeSource(l: Line): RPoint = if (l.start.x < l.stop.x ||
+  def computeSource(l: Line): Point = if (l.start.x < l.stop.x ||
     (l.start.x == l.stop.x && l.start.y < l.stop.y))
     l.start
   else
     l.stop
 
-  def computeTarget(l: Line, source: RPoint): RPoint = if (l.start != source) l.start else l.stop
+  def computeTarget(l: Line, source: Point): Point = if (l.start != source) l.start else l.stop
 }

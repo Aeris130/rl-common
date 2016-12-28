@@ -1,7 +1,5 @@
 package net.cyndeline.rlcommon.math.geom.spatialIndex.common
 
-import spire.math.Rational
-
 /**
   * Lets the user enter custom data types into multi-dimensional trees by specifying how many dimensions a data type
   * has, and which value that should be mapped to each dimension.
@@ -21,14 +19,14 @@ trait ElementProperty[E] {
     *                  first dimensions, while the y value is the second.
     * @return The spatial value of the element, given the current dimension.
     */
-  def value(element: E, dimension: Int): Rational
+  def value(element: E, dimension: Int): Int
 
   /**
     * @param a An element in the tree.
     * @param b An element in the tree.
     * @return The distance between the elements a and b.
     */
-  def distance(a: E, b: E): Rational
+  def distance(a: E, b: E): Double
 
   /**
     * The distance between two elements along the axis of a single dimension. For a pair of 2D points where the first
@@ -40,6 +38,18 @@ trait ElementProperty[E] {
     * @param dimension The dimension for which distance between a and b should be checked.
     * @return The distance between the elements a and b in the specified dimension.
     */
-  def axisDistance(a: E, b: E, dimension: Int): Rational
+  def axisDistance(a: E, b: E, dimension: Int): Int
+
+}
+
+object ElementProperty {
+
+  /** 1D property for integers. */
+  implicit val intProperty = new ElementProperty[Int]() {
+    override val totalDimensions: Int = 1
+    override def value(element: Int, dimension: Int): Int = element
+    override def distance(a: Int, b: Int): Double = Math.abs(a - b)
+    override def axisDistance(a: Int, b: Int, dimension: Int): Int = Math.abs(a - b)
+  }
 
 }

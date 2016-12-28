@@ -7,7 +7,7 @@ import scala.language.implicitConversions
 /**
   * A 2D coordinate using rational values.
   */
-class RPoint(val x: Rational, val y: Rational) extends PointInterface[RPoint, Rational] with Ordered[RPoint] {
+class RPoint(val x: Rational, val y: Rational) extends Point2D[RPoint, Rational] with Ordered[RPoint] {
 
   override def asTuple: (Rational, Rational) = (x, y)
 
@@ -29,8 +29,8 @@ class RPoint(val x: Rational, val y: Rational) extends PointInterface[RPoint, Ra
 
   override def *(p: RPoint): RPoint = build(x * p.x, y * p.y)
 
-  override def move(angle: Rational, distance: Rational): RPoint = {
-    val radians = Math.toRadians(angle.toDouble)
+  override def move(angle: Double, distance: Double): RPoint = {
+    val radians = Math.toRadians(angle)
     val newX = x + (distance * Math.cos(radians))
     val newY = y + (distance * Math.sin(radians))
     RPoint(newX, newY)
@@ -38,11 +38,15 @@ class RPoint(val x: Rational, val y: Rational) extends PointInterface[RPoint, Ra
 
   override def crossProduct(p: RPoint): Rational = (x * p.y) - (y * p.x)
 
-  override def distanceTo(p: RPoint): Rational = {
+  override def distanceTo(p: RPoint): Double = {
     val dx = x - p.x
     val dy = y - p.y
     val d = dx * dx + dy * dy
     Math.sqrt(d.toDouble)
+  }
+
+  override def angleTo(p: RPoint): Double = {
+    DPoint(this).angleTo(DPoint(p))
   }
 
   private def build(ox: Rational, oy: Rational) = new RPoint(ox, oy)

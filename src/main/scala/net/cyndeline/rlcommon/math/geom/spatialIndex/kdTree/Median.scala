@@ -78,7 +78,7 @@ object Median {
      */
     val sortedLists = for (i <- 1 to prop.totalDimensions) yield {
       val superKey = keys(i - 1)
-      discardDuplicates(HeapSort(initialElements)(superKey))
+      HeapSort(initialElements)(superKey).distinct
     }
 
     new Median[E](prop, keys, sortedLists.toVector)
@@ -119,20 +119,6 @@ object Median {
 
       0 // No differing value found, both objects are equal
     }
-  }
-
-  private def discardDuplicates[E](remaining: Vector[E]): Vector[E] = if (remaining.isEmpty) {
-    remaining
-  } else {
-    remaining.head +: discardDuplicates(remaining.drop(1), remaining.head)
-  }
-  private def discardDuplicates[E](remaining: Vector[E], last: E): Vector[E] = {
-    if (remaining.isEmpty)
-      remaining
-    else if (remaining.head == last)
-      discardDuplicates(remaining.drop(1), last)
-    else
-      remaining.head +: discardDuplicates(remaining.drop(1), remaining.head)
   }
 
 }

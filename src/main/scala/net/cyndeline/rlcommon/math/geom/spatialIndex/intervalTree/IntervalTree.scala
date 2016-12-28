@@ -3,7 +3,6 @@ package net.cyndeline.rlcommon.math.geom.spatialIndex.intervalTree
 import net.cyndeline.rlcommon.collections.{RBTree, ValueFactory}
 import net.cyndeline.rlcommon.math.geom.spatialIndex.common.ElementProperty
 import net.cyndeline.rlcommon.math.geom.spatialIndex.intervalTree.IntervalTree.{IntervalData, IntervalSegmentData, IntervalTreeData}
-import spire.math.Rational
 
 import scala.language.implicitConversions
 import Ordering.Implicits._
@@ -66,7 +65,7 @@ class IntervalTree[T: Ordering] private (data: RBTree[IntervalData[T]],
       } else {
         Set[(T, T)]()
       }
-      val right = if (!n.right.isEmpty && n.right.value.low <= highest) {
+      val right = if (!n.right.isEmpty && lowPoint <= to) {
         traverse(n.right)
       } else {
         Set[(T, T)]()
@@ -200,7 +199,7 @@ object IntervalTree {
     * @param high The highest endpoint in the interval.
     * @param max The highest endpoint between this node and its children max values.
     */
-  private abstract class IntervalData[T : Ordering](val low: Rational, val high: Rational, val max: Rational) extends Ordered[IntervalData[T]] {
+  private abstract class IntervalData[T : Ordering](val low: Int, val high: Int, val max: Int) extends Ordered[IntervalData[T]] {
     def compare(other: IntervalData[T]): Int = {
       if (low < other.low) -1
       else if (low > other.low) 1
@@ -209,7 +208,7 @@ object IntervalTree {
       else 0
     }
 
-    def setMax(newMax: Rational): IntervalData[T]
+    def setMax(newMax: Int): IntervalData[T]
     def add(from: T, to: T): IntervalData[T]
     def remove(from: T, to: T): IntervalData[T]
     def isEmpty: Boolean
@@ -220,8 +219,8 @@ object IntervalTree {
     *                this tree.
     * @tparam T End point type.
     */
-  private class IntervalTreeData[T : Ordering](l: Rational, h: Rational, m: Rational, val nextDim: IntervalTree[T]) extends IntervalData[T](l, h, m) {
-    override def setMax(newMax: Rational) = new IntervalTreeData(l, h, newMax, nextDim)
+  private class IntervalTreeData[T : Ordering](l: Int, h: Int, m: Int, val nextDim: IntervalTree[T]) extends IntervalData[T](l, h, m) {
+    override def setMax(newMax: Int) = new IntervalTreeData(l, h, newMax, nextDim)
     override def add(from: T, to: T) = new IntervalTreeData(l, h, m, nextDim.insert(from, to))
     override def remove(from: T, to: T) = new IntervalTreeData(l, h, m, nextDim.delete(from, to))
     override def isEmpty = nextDim.isEmpty
@@ -231,8 +230,8 @@ object IntervalTree {
     * @param intervals Every interval that uses spatial data (low, high) for this dimension and every one before it.
     * @tparam T Endpoint type.
     */
-  private class IntervalSegmentData[T : Ordering](l: Rational, h: Rational, m: Rational, val intervals: Set[(T, T)]) extends IntervalData[T](l, h, m) {
-    override def setMax(newMax: Rational) = new IntervalSegmentData(l, h, newMax, intervals)
+  private class IntervalSegmentData[T : Ordering](l: Int, h: Int, m: Int, val intervals: Set[(T, T)]) extends IntervalData[T](l, h, m) {
+    override def setMax(newMax: Int) = new IntervalSegmentData(l, h, newMax, intervals)
     override def add(from: T, to: T) = new IntervalSegmentData(l, h, m, intervals + ((from, to)))
     override def remove(from: T, to: T) = new IntervalSegmentData(l, h, m, intervals - ((from, to)))
     override def isEmpty = intervals.isEmpty
@@ -249,15 +248,14 @@ object IntervalTree {
       override def compare(x: IntervalData[T], y: IntervalData[T]): Int = x compare y
     }
 
-    def max(a: Rational, b: Rational): Rational = if (a > b) a else b
+    def max(a: Int, b: Int): Int = if (a > b) a else b
 
     new ValueFactory[IntervalData[T]] {
       override def mValue(v: IntervalData[T], left: RBTree[IntervalData[T]], right: RBTree[IntervalData[T]]): IntervalData[T] = {
-        val lMax = if (left.isEmpty) v.max else left.value.max
-        val rMax = if (right.isEmpty) v.max else right.value.max
+        val lMax = if (left.isEmpty) v.high else left.value.max
+        val rMax = if (right.isEmpty) v.high else right.value.max
 
-        // Only update the interval data if a new max value occurs doe to tree modification.
-        if (lMax > v.max || rMax > v.max)
+        if (lMax != v.max || rMax != v.max)
           v.setMax(max(lMax, rMax))
         else
           v

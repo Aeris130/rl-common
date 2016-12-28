@@ -1,7 +1,5 @@
 package net.cyndeline.rlcommon.math.geom
 
-import net.cyndeline.rlcommon.util.UnorderedPair
-
 /**
   * Represents a single intersection point or an overlapping interval between two line segments.
   */

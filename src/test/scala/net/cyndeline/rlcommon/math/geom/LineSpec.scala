@@ -355,7 +355,7 @@ class LineSpec extends SpecImports {
       Then("the overlap should be line 2")
       intersection should be ('defined)
       intersection.get.isInterval should be (true)
-      intersection.get.overlap should be ((l2.start, l2.stop))
+      intersection.get.overlap should be ((RPoint(l2.start), RPoint(l2.stop)))
 
     }
 
@@ -371,7 +371,7 @@ class LineSpec extends SpecImports {
       Then("the overlap should be (3,3) to (5,5)")
       intersection should be ('defined)
       intersection.get.isInterval should be (true)
-      intersection.get.overlap should be ((l2.start, l2.stop))
+      intersection.get.overlap should be (RPoint(l2.start), RPoint(l2.stop))
 
     }
 
@@ -387,7 +387,7 @@ class LineSpec extends SpecImports {
       Then("the overlap should be (3,3) to (5,5)")
       intersection should be ('defined)
       intersection.get.isInterval should be (true)
-      intersection.get.overlap should be ((l2.start, l2.stop))
+      intersection.get.overlap should be ((RPoint(l2.start), RPoint(l2.stop)))
 
     }
 
@@ -403,7 +403,7 @@ class LineSpec extends SpecImports {
       Then("the overlap should be (1,5) to (1,7)")
       intersection should be ('defined)
       intersection.get.isInterval should be (true)
-      intersection.get.overlap should be ((l2.start, l1.stop))
+      intersection.get.overlap should be ((RPoint(l2.start), RPoint(l1.stop)))
 
     }
 
@@ -419,7 +419,7 @@ class LineSpec extends SpecImports {
       Then("the overlap should be (1,2) to (1,5)")
       intersection should be ('defined)
       intersection.get.isInterval should be (true)
-      intersection.get.overlap should be ((l1.start, l2.stop))
+      intersection.get.overlap should be ((RPoint(l1.start), RPoint(l2.stop)))
 
     }
 
@@ -435,7 +435,7 @@ class LineSpec extends SpecImports {
       Then("the overlap should be (5,5) to (6,6)")
       intersection should be ('defined)
       intersection.get.isInterval should be (true)
-      intersection.get.overlap should be ((l2.stop, l1.stop))
+      intersection.get.overlap should be ((RPoint(l2.stop), RPoint(l1.stop)))
 
     }
 
@@ -631,7 +631,7 @@ class LineSpec extends SpecImports {
       val split = line.split(4)
 
       Then("the splits should be (7,3), (6,4), (5,5), (4,6)")
-      split should be (Seq(RPoint(7, 3), RPoint(6, 4), RPoint(5, 5), RPoint(4, 6)))
+      split should be (Seq(DPoint(7, 3), DPoint(6, 4), DPoint(5, 5), DPoint(4, 6)))
 
     }
 
@@ -644,36 +644,36 @@ class LineSpec extends SpecImports {
       val split = line.split(3)
 
       Then("the splits should be (7,3), (5.5, 4.5), (4,6)")
-      split should be (Seq(RPoint(7, 3), RPoint(Rational(11, 2), Rational(9, 2)), RPoint(4, 6)))
+      split should be (Seq(DPoint(7, 3), DPoint(11d / 2, 9d / 2), DPoint(4, 6)))
 
     }
 
     it ("should 'split' a line into two parts") {
 
       Given("a line")
-      val start = RPoint(234, 99743)
-      val stop = RPoint(1334, 754)
+      val start = Point(234, 99743)
+      val stop = Point(1334, 754)
       val line = Line(start, stop)
 
       When("splitting the line into 2 parts")
       val split = line.split(2)
 
       Then("the splits should be start and stop")
-      split should be (Seq(start, stop))
+      split should be (Seq(DPoint(start), DPoint(stop)))
 
     }
 
     it ("should split a single-point segment") {
 
       Given("a single-point line")
-      val p = RPoint(2, 2)
+      val p = Point(2, 2)
       val line = Line(p, p)
 
       When("splitting the line 4 times")
       val split = line.split(4)
 
       Then("only the lines start and stop coordinate should be returned")
-      split should be (Vector(p))
+      split should be (Vector(DPoint(p)))
 
     }
 
@@ -692,8 +692,8 @@ class LineSpec extends SpecImports {
       val slope2 = l2.slope
 
       Then("both slopes should be 6 / 10")
-      slope1 should be (Rational(6, 10))
-      slope2 should be (Rational(6, 10))
+      slope1 should be (6d / 10)
+      slope2 should be (6d / 10)
 
     }
 

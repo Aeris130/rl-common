@@ -3,7 +3,6 @@ package net.cyndeline.rlcommon.math.geom.spatialIndex.intervalTree
 import net.cyndeline.rlcommon.SpecImports
 import net.cyndeline.rlcommon.math.geom.Point
 import net.cyndeline.rlcommon.math.geom.spatialIndex.common.ElementProperty
-import spire.math.Rational
 
 class IntervalTreeSpec extends SpecImports {
 
@@ -11,29 +10,19 @@ class IntervalTreeSpec extends SpecImports {
     * 1D tree of integers
     */
   private def intTree1D = new {
-    val intProp = new ElementProperty[Int]() {
-      override val totalDimensions: Int = 1
-      override def value(element: Int, dimension: Int): Rational = {
-        require(dimension == 1, "Wrong dimension!")
-        element
-      }
-      override def distance(a: Int, b: Int): Rational = ???
-      override def axisDistance(a: Int, b: Int, dimension: Int): Rational = ???
-    }
-
-    val tree = IntervalTree.empty(intProp)
+    val tree = IntervalTree.empty(ElementProperty.intProperty)
   }
 
   private def intTree2D = new {
     val intProp = new ElementProperty[Point]() {
       override val totalDimensions: Int = 2
-      override def value(element: Point, dimension: Int): Rational = dimension match {
+      override def value(element: Point, dimension: Int) = dimension match {
         case 1 => element.y
         case 2 => element.x
         case _ => fail("Only two dimensions allowed in 2D points.")
       }
-      override def distance(a: Point, b: Point): Rational = ???
-      override def axisDistance(a: Point, b: Point, dimension: Int): Rational = ???
+      override def distance(a: Point, b: Point) = ???
+      override def axisDistance(a: Point, b: Point, dimension: Int) = ???
     }
     implicit val pointOrdering = new Ordering[Point]() {
       override def compare(a: Point, b: Point): Int = if (a.x < b.x) -1
@@ -137,6 +126,21 @@ class IntervalTreeSpec extends SpecImports {
 
       Then("only a single interval should exist")
       withInterval.values should be (Set((3, 7)))
+
+    }
+
+    it ("should search for intervals to the left of a node that lies above the search interval") {
+
+      Given("a tree where the root (4,5) has a left child (4,4) and right child (8,8) which in turn has a left child (5,8)")
+      val f = intTree1D
+      import f._
+      val withIntervals = tree.insert(4, 4).insert(4, 5).insert(8, 8).insert(5, 8)
+
+      When("searching using the range 4-7")
+      val result = withIntervals.search(4, 7)
+
+      Then("the intervals (4,4), (4,5) and (5,8) should be found")
+      result should be (Set((4,4), (4,5), (5,8)))
 
     }
 

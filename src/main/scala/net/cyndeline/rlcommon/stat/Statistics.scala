@@ -1,6 +1,5 @@
 package net.cyndeline.rlcommon.stat
 
-import spire.math.Rational
 import Numeric.Implicits._
 
 /**

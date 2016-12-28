@@ -1,7 +1,6 @@
 package net.cyndeline.rlcommon.stat
 
 import net.cyndeline.rlcommon.SpecImports
-import spire.math.Rational
 
 class StatisticsSpec extends SpecImports {
 

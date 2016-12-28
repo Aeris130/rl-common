@@ -169,7 +169,7 @@ class BentleyOttmannIntersection private (inclSingleCoordinates: Boolean) {
 
             if (i.isSinglePoint) {
               val p = i.pointIntersection
-              if (EventPoint.coordinateLessThan(targetP, p)) {
+              if (EventPoint.coordinateLessThan(RPoint(targetP), p)) {
                 intersectionStorage = intersectionStorage.add(previousIntersection, s1, s2, false)
 
                 addCollinearPoints(s1, s2)

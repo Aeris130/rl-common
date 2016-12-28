@@ -1,13 +1,13 @@
 package net.cyndeline.rlcommon.math.geom.intersection.bentleyOttmann
 
 import net.cyndeline.rlcommon.SpecImports
-import net.cyndeline.rlcommon.math.geom.{Line, RPoint}
-import spire.math.Rational
+import net.cyndeline.rlcommon.math.geom.{Line, Point, RPoint}
 
 class BentleyOttmannIntersectionSpec extends SpecImports {
-  implicit def intTupleToRational(t: (Int, Int)): (Rational, Rational) = (Rational(t._1), Rational(t._2))
   private val algorithm = BentleyOttmannIntersection.withoutSinglePointIntersections
   private val algWithSinglePoints = BentleyOttmannIntersection.withSinglePointIntersections
+
+  private def r(a: Point, b: Point) = (RPoint(a), RPoint(b))
 
   // The regular line class considers lines with the same coordinate identical.
   class IDSegment(val id: Int, start: RPoint, stop: RPoint) extends Line(start, stop) {
@@ -74,16 +74,16 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 10
       assert(!intersections.exists(_._1.isSinglePoint))
 
-      assert(intersections.exists(o => o._1.overlap == (b.start, a.stop) && segSet(o._2) == Set(a, b)))
-      assert(intersections.exists(o => o._1.overlap == (c.start, a.stop) && segSet(o._2) == Set(a, c)))
-      assert(intersections.exists(o => o._1.overlap == (d.start, a.stop) && segSet(o._2) == Set(a, d)))
-      assert(intersections.exists(o => o._1.overlap == (e.start, a.stop) && segSet(o._2) == Set(a, e)))
-      assert(intersections.exists(o => o._1.overlap == (c.start, b.stop) && segSet(o._2) == Set(b, c)))
-      assert(intersections.exists(o => o._1.overlap == (d.start, b.stop) && segSet(o._2) == Set(b, d)))
-      assert(intersections.exists(o => o._1.overlap == (e.start, b.stop) && segSet(o._2) == Set(b, e)))
-      assert(intersections.exists(o => o._1.overlap == (d.start, c.stop) && segSet(o._2) == Set(c, d)))
-      assert(intersections.exists(o => o._1.overlap == (e.start, c.stop) && segSet(o._2) == Set(c, e)))
-      assert(intersections.exists(o => o._1.overlap == (e.start, d.stop) && segSet(o._2) == Set(d, e)))
+      assert(intersections.exists(o => o._1.overlap == r(b.start, a.stop) && segSet(o._2) == Set(a, b)))
+      assert(intersections.exists(o => o._1.overlap == r(c.start, a.stop) && segSet(o._2) == Set(a, c)))
+      assert(intersections.exists(o => o._1.overlap == r(d.start, a.stop) && segSet(o._2) == Set(a, d)))
+      assert(intersections.exists(o => o._1.overlap == r(e.start, a.stop) && segSet(o._2) == Set(a, e)))
+      assert(intersections.exists(o => o._1.overlap == r(c.start, b.stop) && segSet(o._2) == Set(b, c)))
+      assert(intersections.exists(o => o._1.overlap == r(d.start, b.stop) && segSet(o._2) == Set(b, d)))
+      assert(intersections.exists(o => o._1.overlap == r(e.start, b.stop) && segSet(o._2) == Set(b, e)))
+      assert(intersections.exists(o => o._1.overlap == r(d.start, c.stop) && segSet(o._2) == Set(c, d)))
+      assert(intersections.exists(o => o._1.overlap == r(e.start, c.stop) && segSet(o._2) == Set(c, e)))
+      assert(intersections.exists(o => o._1.overlap == r(e.start, d.stop) && segSet(o._2) == Set(d, e)))
 
     }
 
@@ -104,7 +104,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       assert(!intersections.exists(_._1.isSinglePoint))
       val start = a.start
       val stop = a.stop
-      assert(intersections.exists(o => o._1.overlap == (start, stop) && segSet(o._2) == Set(a, b, c, d, e)))
+      assert(intersections.exists(o => o._1.overlap == (RPoint(start), RPoint(stop)) && segSet(o._2) == Set(a, b, c, d, e)))
 
     }
 
@@ -121,7 +121,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("the resulting overlap should contain three instances of the line in its vector")
       intersections should have size 1
       assert(!intersections.exists(_._1.isSinglePoint))
-      assert(intersections.exists(o => o._1.overlap == (s1.start, s1.stop) && o._2 == Vector(s1, s2, s3)))
+      assert(intersections.exists(o => o._1.overlap == r(s1.start, s1.stop) && o._2 == Vector(s1, s2, s3)))
 
     }
 
@@ -140,7 +140,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       assert(!intersections.exists(_._1.isSinglePoint))
       val start = s1.start
       val stop = s2.stop
-      assert(intersections.exists(o => o._1.overlap == (start, stop) && segSet(o._2) == Set(s1, s2, differs)))
+      assert(intersections.exists(o => o._1.overlap == r(start, stop) && segSet(o._2) == Set(s1, s2, differs)))
 
     }
 
@@ -176,8 +176,8 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 2
       assert(!intersections.exists(_._1.isSinglePoint))
 
-      assert(intersections.exists(o => o._1.overlap == (s2.start, s2.stop) && segSet(o._2) == Set(s1, s2)))
-      assert(intersections.exists(o => o._1.overlap == (s3.start, s3.stop) && segSet(o._2) == Set(s1, s2, s3)))
+      assert(intersections.exists(o => o._1.overlap == r(s2.start, s2.stop) && segSet(o._2) == Set(s1, s2)))
+      assert(intersections.exists(o => o._1.overlap == r(s3.start, s3.stop) && segSet(o._2) == Set(s1, s2, s3)))
 
     }
 
@@ -246,7 +246,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("an intersection should be found between s1 and s2")
       intersections should have size 1
       assert(!intersections.exists(_._1.isSinglePoint))
-      assert(intersections.exists(o => o._1.overlap == (s2.start, s2.stop) && segSet(o._2) == Set(s1, s2)))
+      assert(intersections.exists(o => o._1.overlap == r(s2.start, s2.stop) && segSet(o._2) == Set(s1, s2)))
 
     }
 
@@ -263,12 +263,12 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("an intersection interval should be found between s1, s2 and s3")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 1
-      assert(overlaps.exists(o => o._1.overlap == (s2.start, s2.stop) && segSet(o._2) == Set(s1, s2, s3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2.start, s2.stop) && segSet(o._2) == Set(s1, s2, s3)))
 
       And("an intersection point should be found between s1 and s3")
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      assert(points.exists(o => o._1.pointIntersection == s2.start && segSet(o._2) == Set(s1, s3)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(s2.start) && segSet(o._2) == Set(s1, s3)))
 
     }
 
@@ -286,12 +286,12 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("an intersection should be found between s1, s2 and s3")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 1
-      assert(overlaps.exists(o => o._1.overlap == (s2_1.start, s2_1.stop) && segSet(o._2) == Set(s1, s2_1, s2_2, s3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2_1.start, s2_1.stop) && segSet(o._2) == Set(s1, s2_1, s2_2, s3)))
 
       And("an intersection should be found between s1 and s3")
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      assert(points.exists(o => o._1.pointIntersection == s2_1.start && segSet(o._2) == Set(s1, s3)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(s2_1.start) && segSet(o._2) == Set(s1, s3)))
 
     }
 
@@ -307,8 +307,8 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
 
       Then("an intersection should be found between s1, s2 and s3, and between s1 and s2")
       intersections should have size 2
-      assert(intersections.exists(o => o._1.overlap == (s3.start, s3.stop) && segSet(o._2) == Set(s1, s2, s3)))
-      assert(intersections.exists(o => o._1.overlap == (s1.start, s1.stop) && segSet(o._2) == Set(s1, s2)))
+      assert(intersections.exists(o => o._1.overlap == r(s3.start, s3.stop) && segSet(o._2) == Set(s1, s2, s3)))
+      assert(intersections.exists(o => o._1.overlap == r(s1.start, s1.stop) && segSet(o._2) == Set(s1, s2)))
 
     }
 
@@ -408,10 +408,10 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("an intersection between l1 and l2 should be found at (1,2)")
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 2
-      assert(points.exists(o => o._1.pointIntersection == l1.start && segSet(o._2) == Set(l1, l2)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(l1.start) && segSet(o._2) == Set(l1, l2)))
 
       And("an intersection between l1, l3 and l4 should be found at (1,5)")
-      assert(points.exists(o => o._1.pointIntersection == l3.start && segSet(o._2) == Set(l1, l3, l4)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(l3.start) && segSet(o._2) == Set(l1, l3, l4)))
 
       And("an overlap between l1 and l4 should be found at (1,5)->(1,6)")
       val overlap = intersections.filter(_._1.isInterval)
@@ -433,7 +433,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 1
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      assert(points.exists(o => o._1.pointIntersection == l2.start && segSet(o._2) == Set(l1, l2)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(l2.start) && segSet(o._2) == Set(l1, l2)))
 
     }
 
@@ -451,15 +451,15 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 3
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      assert(points.exists(o => o._1.pointIntersection == l2.start && segSet(o._2) == Set(l1, l2, l3)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(l2.start) && segSet(o._2) == Set(l1, l2, l3)))
 
       And("an overlap between l1 and l3 should exist between (4,4)->(7,7)")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 2
-      assert(overlap.exists(o => o._1.overlap == (l3.start, l1.stop) && segSet(o._2) == Set(l1, l3)))
+      assert(overlap.exists(o => o._1.overlap == r(l3.start, l1.stop) && segSet(o._2) == Set(l1, l3)))
 
       And("an overlap between l2 and l3 should exist between (7,7)->(9,9)")
-      assert(overlap.exists(o => o._1.overlap == (l2.start, l3.stop) && segSet(o._2) == Set(l2, l3)))
+      assert(overlap.exists(o => o._1.overlap == r(l2.start, l3.stop) && segSet(o._2) == Set(l2, l3)))
 
     }
 
@@ -478,15 +478,15 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 3
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      assert(points.exists(o => o._1.pointIntersection == l1.stop && segSet(o._2) == Set(l1, l2, l3, l4)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(l1.stop) && segSet(o._2) == Set(l1, l2, l3, l4)))
 
       And("an overlap between l1 and l2 should exist between (2,2)->(5,5)")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 2
-      assert(overlap.exists(o => o._1.overlap == (l1.start, l1.stop) && segSet(o._2) == Set(l1, l2)))
+      assert(overlap.exists(o => o._1.overlap == r(l1.start, l1.stop) && segSet(o._2) == Set(l1, l2)))
 
       And("an overlap between l3 and l4 should exist between (5,5)->(8,8)")
-      assert(overlap.exists(o => o._1.overlap == (l3.start, l3.stop) && segSet(o._2) == Set(l3, l4)))
+      assert(overlap.exists(o => o._1.overlap == r(l3.start, l3.stop) && segSet(o._2) == Set(l3, l4)))
 
     }
 
@@ -504,15 +504,15 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 3
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      assert(points.exists(o => o._1.pointIntersection == l3.stop && segSet(o._2) == Set(l1, l2, l3)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(l3.stop) && segSet(o._2) == Set(l1, l2, l3)))
 
       And("an overlap between l1 and l3 should exist between (1,5)->(3,7)")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 2
-      assert(overlap.exists(o => o._1.overlap == (l1.start, l3.stop) && segSet(o._2) == Set(l3, l1)))
+      assert(overlap.exists(o => o._1.overlap == r(l1.start, l3.stop) && segSet(o._2) == Set(l3, l1)))
 
       And("an overlap between l1 and l2 should exist between (3,7)->(6,10)")
-      assert(overlap.exists(o => o._1.overlap == (l2.start, l1.stop) && segSet(o._2) == Set(l2, l1)))
+      assert(overlap.exists(o => o._1.overlap == r(l2.start, l1.stop) && segSet(o._2) == Set(l2, l1)))
 
     }
 
@@ -532,15 +532,15 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 3
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      assert(points.exists(o => o._1.pointIntersection == l5.stop && segSet(o._2) == Set(l1, l2, l3, l4, l5)))
+      assert(points.exists(o => o._1.pointIntersection == RPoint(l5.stop) && segSet(o._2) == Set(l1, l2, l3, l4, l5)))
 
       And("an overlap between l1-4 should exist between (5,5)->(8,8)")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 2
-      assert(overlap.exists(o => o._1.overlap == (l1.start, l1.stop) && segSet(o._2) == Set(l1, l2, l3, l4)))
+      assert(overlap.exists(o => o._1.overlap == r(l1.start, l1.stop) && segSet(o._2) == Set(l1, l2, l3, l4)))
 
       And("an overlap between l2 and l4 should exist between (5,5)->(10,10)")
-      assert(overlap.exists(o => o._1.overlap == (l2.start, l2.stop) && segSet(o._2) == Set(l2, l4)))
+      assert(overlap.exists(o => o._1.overlap == r(l2.start, l2.stop) && segSet(o._2) == Set(l2, l4)))
 
     }
 
@@ -609,7 +609,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap between s0 and s1 should be found")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (l0.stop, l0.start) && segSet(o._2) == Set(l0, l2)))
+      assert(overlap.exists(o => o._1.overlap == r(l0.stop, l0.start) && segSet(o._2) == Set(l0, l2)))
 
     }
 
@@ -632,7 +632,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap between s1 and s2 should be found")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s1.start, s2.stop) && segSet(o._2) == Set(s1, s2)))
+      assert(overlap.exists(o => o._1.overlap == r(s1.start, s2.stop) && segSet(o._2) == Set(s1, s2)))
 
     }
 
@@ -664,7 +664,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap between s0 and s1 should be found")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s1.start, s0.stop) && segSet(o._2) == Set(s0, s1)))
+      assert(overlap.exists(o => o._1.overlap == r(s1.start, s0.stop) && segSet(o._2) == Set(s0, s1)))
 
     }
 
@@ -686,7 +686,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("there should be an overlap between s1 and s3")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s1.start, s1.stop) && segSet(o._2) == Set(s1, s3)))
+      assert(overlap.exists(o => o._1.overlap == r(s1.start, s1.stop) && segSet(o._2) == Set(s1, s3)))
 
     }
 
@@ -743,7 +743,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap between s1 and s2 should be found")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s1.start, s1.stop) && segSet(o._2) == Set(s1, s2)))
+      assert(overlap.exists(o => o._1.overlap == r(s1.start, s1.stop) && segSet(o._2) == Set(s1, s2)))
 
     }
 
@@ -766,7 +766,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap should be found between s0, s1 and s2")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s0.start, s0.stop) && segSet(o._2) == Set(s0, s1, s2)))
+      assert(overlap.exists(o => o._1.overlap == r(s0.start, s0.stop) && segSet(o._2) == Set(s0, s1, s2)))
 
     }
 
@@ -790,7 +790,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap should be found between s1 and s3")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s1.start, s1.stop) && segSet(o._2) == Set(s1, s3)))
+      assert(overlap.exists(o => o._1.overlap == r(s1.start, s1.stop) && segSet(o._2) == Set(s1, s3)))
 
     }
 
@@ -823,7 +823,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap between s3 and s0 should be found")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s0.start, s0.stop) && segSet(o._2) == Set(s0, s3)))
+      assert(overlap.exists(o => o._1.overlap == r(s0.start, s0.stop) && segSet(o._2) == Set(s0, s3)))
 
     }
 
@@ -842,7 +842,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("an overlap should be found at (5,2) with all four segments")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 1
-      assert(overlap.exists(o => o._1.overlap == (s1.start, s1.stop) && segSet(o._2) == Set(s0, s1, s2, s3)))
+      assert(overlap.exists(o => o._1.overlap == r(s1.start, s1.stop) && segSet(o._2) == Set(s0, s1, s2, s3)))
 
       And("an intersection should be found at (5,2) with all four segments")
       val points = intersections.filter(_._1.isSinglePoint)
@@ -905,7 +905,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 1
       val intersection = intersections.head
       intersection._1.isSinglePoint should be (true)
-      intersection._1.pointIntersection should be (s.start)
+      intersection._1.pointIntersection should be (RPoint(s.start))
       segSet(intersection._2) should be (Set(s, s1))
 
     }
@@ -924,7 +924,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 1
       val intersection = intersections.head
       intersection._1.isSinglePoint should be (true)
-      intersection._1.pointIntersection should be (s.start)
+      intersection._1.pointIntersection should be (RPoint(s.start))
       segSet(intersection._2) should be (Set(s, s1))
 
     }
@@ -945,7 +945,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
 
       And("one intersection should be between s1 and s, in the source point of s")
       assert(intersections.exists(i => i._1.isSinglePoint &&
-        i._1.pointIntersection == s.start &&
+        i._1.pointIntersection == RPoint(s.start) &&
         segSet(i._2) == Set(s1, s)), "No intersection beginning in s found.")
 
       And("one intersection should be between s' and s")
@@ -970,7 +970,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       intersections should have size 1
       val intersection = intersections.head
       intersection._1.isSinglePoint should be (true)
-      intersection._1.pointIntersection should be (s.start)
+      intersection._1.pointIntersection should be (RPoint(s.start))
       segSet(intersection._2) should be (Set(s, s1))
 
     }
@@ -990,14 +990,14 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("there should be a single-point intersections between s and the three s1-segments")
       val singlePoints = intersections.filter(_._1.isSinglePoint)
       singlePoints should have size 1
-      assert(singlePoints.exists(i => i._1.pointIntersection == s.start && segSet(i._2) == Set(s1_1, s1_2, s1_3, s)))
+      assert(singlePoints.exists(i => i._1.pointIntersection == RPoint(s.start) && segSet(i._2) == Set(s1_1, s1_2, s1_3, s)))
 
       And("there should be three overlapping segments between s1_1 + s1_2, s1_1 + s1_3 and s1_2 + s1_3")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 3
-      assert(overlap.exists(o => o._1.overlap == (s1_3.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_3)))
-      assert(overlap.exists(o => o._1.overlap == (s1_3.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s1_3)))
-      assert(overlap.exists(o => o._1.overlap == (s1_1.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_2)))
+      assert(overlap.exists(o => o._1.overlap == r(s1_3.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_3)))
+      assert(overlap.exists(o => o._1.overlap == r(s1_3.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s1_3)))
+      assert(overlap.exists(o => o._1.overlap == r(s1_1.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_2)))
 
     }
 
@@ -1018,14 +1018,14 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("there should be three single-point intersections between s and the three s1-segments")
       val singlePoints = intersections.filter(_._1.isSinglePoint)
       singlePoints should have size 1
-      assert(singlePoints.exists(i => i._1.pointIntersection == s.start && segSet(i._2) == Set(s1_1, s1_2, s1_3, s)))
+      assert(singlePoints.exists(i => i._1.pointIntersection == RPoint(s.start) && segSet(i._2) == Set(s1_1, s1_2, s1_3, s)))
 
       And("there should be three overlapping segments between s1_1 + s1_2, s1_1 + s1_3 and s1_2 + s1_3")
       val overlap = intersections.filter(_._1.isInterval)
       overlap should have size 3
-      assert(overlap.exists(o => o._1.overlap == (s1_1.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_2)))
-      assert(overlap.exists(o => o._1.overlap == (s1_3.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_3)))
-      assert(overlap.exists(o => o._1.overlap == (s1_3.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s1_3)))
+      assert(overlap.exists(o => o._1.overlap == r(s1_1.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_2)))
+      assert(overlap.exists(o => o._1.overlap == r(s1_3.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_3)))
+      assert(overlap.exists(o => o._1.overlap == r(s1_3.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s1_3)))
 
     }
 
@@ -1050,19 +1050,19 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("there should be a single point intersection between s and s'")
       intersections.count(_._1.isSinglePoint) should be (1)
       val single = intersections.find(_._1.isSinglePoint).get
-      single._1.pointIntersection should be (s1P.stop)
+      single._1.pointIntersection should be (RPoint(s1P.stop))
       segSet(single._2) should be (Set(s1P, s))
 
       And("there should be 6 segment overlaps between s1:1-3 and s.")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 6
 
-      assert(overlaps.exists(o => o._1.overlap == (s1_1.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_2)))
-      assert(overlaps.exists(o => o._1.overlap == (s1_3.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_3)))
-      assert(overlaps.exists(o => o._1.overlap == (s.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s)))
-      assert(overlaps.exists(o => o._1.overlap == (s1_3.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s1_3)))
-      assert(overlaps.exists(o => o._1.overlap == (s.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s)))
-      assert(overlaps.exists(o => o._1.overlap == (s.start, s1_3.stop) && segSet(o._2) == Set(s1_3, s)))
+      assert(overlaps.exists(o => o._1.overlap == r(s1_1.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_2)))
+      assert(overlaps.exists(o => o._1.overlap == r(s1_3.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s1_3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s.start, s1_1.stop) && segSet(o._2) == Set(s1_1, s)))
+      assert(overlaps.exists(o => o._1.overlap == r(s1_3.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s1_3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s.start, s1_2.stop) && segSet(o._2) == Set(s1_2, s)))
+      assert(overlaps.exists(o => o._1.overlap == r(s.start, s1_3.stop) && segSet(o._2) == Set(s1_3, s)))
 
     }
 
@@ -1087,7 +1087,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("an overlap between s1 and s should be detected")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 1
-      assert(overlaps.exists(o => o._1.overlap == (s.start, s.stop) && segSet(o._2) == Set(s, s1)))
+      assert(overlaps.exists(o => o._1.overlap == r(s.start, s.stop) && segSet(o._2) == Set(s, s1)))
 
     }
 
@@ -1173,15 +1173,15 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("a point intersection between s2:1-3 and s should be found")
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      points.head._1.pointIntersection should be (s.stop)
+      points.head._1.pointIntersection should be (RPoint(s.stop))
       points.head._2.toSet should be (Set(s, s2_1, s2_2, s2_3))
 
       And("three interval overlaps should be found between s2:1-3")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 3
-      assert(overlaps.exists(o => o._1.overlap == (s2_2.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_2)))
-      assert(overlaps.exists(o => o._1.overlap == (s2_3.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_3)))
-      assert(overlaps.exists(o => o._1.overlap == (s2_3.start, s2_2.stop) && segSet(o._2) == Set(s2_2, s2_3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2_2.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_2)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2_3.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2_3.start, s2_2.stop) && segSet(o._2) == Set(s2_2, s2_3)))
 
     }
 
@@ -1202,15 +1202,15 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("a point intersection between s2:1-3 and s should be found")
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      points.head._1.pointIntersection should be (s.stop)
+      points.head._1.pointIntersection should be (RPoint(s.stop))
       points.head._2.toSet should be (Set(s, s2_1, s2_2, s2_3))
 
       And("three interval overlaps should be found between s2:1-3")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 3
-      assert(overlaps.exists(o => o._1.overlap == (s2_2.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_2)))
-      assert(overlaps.exists(o => o._1.overlap == (s2_3.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_3)))
-      assert(overlaps.exists(o => o._1.overlap == (s2_3.start, s2_2.stop) && segSet(o._2) == Set(s2_2, s2_3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2_2.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_2)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2_3.start, s2_1.stop) && segSet(o._2) == Set(s2_1, s2_3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2_3.start, s2_2.stop) && segSet(o._2) == Set(s2_2, s2_3)))
 
     }
 
@@ -1229,9 +1229,9 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("three interval overlaps should be found between s, s1 and s2")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 3
-      assert(overlaps.exists(o => o._1.overlap == (s1.start, s.stop) && segSet(o._2) == Set(s, s1)))
-      assert(overlaps.exists(o => o._1.overlap == (s2.start, s.stop) && segSet(o._2) == Set(s, s2)))
-      assert(overlaps.exists(o => o._1.overlap == (s2.start, s1.stop) && segSet(o._2) == Set(s2, s1)))
+      assert(overlaps.exists(o => o._1.overlap == r(s1.start, s.stop) && segSet(o._2) == Set(s, s1)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2.start, s.stop) && segSet(o._2) == Set(s, s2)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2.start, s1.stop) && segSet(o._2) == Set(s2, s1)))
 
     }
 
@@ -1250,15 +1250,15 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("a point intersection between s1-3 and s1' should be found")
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      points.head._1.pointIntersection should be (s1.stop)
+      points.head._1.pointIntersection should be (RPoint(s1.stop))
       points.head._2.toSet should be (Set(s1, s2, s3, s1P))
 
       And("three interval overlaps should be found between s1, s2 and s3")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 3
-      assert(overlaps.exists(o => o._1.overlap == (s2.start, s1.stop) && segSet(o._2) == Set(s1, s2)))
-      assert(overlaps.exists(o => o._1.overlap == (s3.start, s1.stop) && segSet(o._2) == Set(s1, s3)))
-      assert(overlaps.exists(o => o._1.overlap == (s3.start, s3.stop) && segSet(o._2) == Set(s2, s3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s2.start, s1.stop) && segSet(o._2) == Set(s1, s2)))
+      assert(overlaps.exists(o => o._1.overlap == r(s3.start, s1.stop) && segSet(o._2) == Set(s1, s3)))
+      assert(overlaps.exists(o => o._1.overlap == r(s3.start, s3.stop) && segSet(o._2) == Set(s2, s3)))
 
     }
 
@@ -1274,7 +1274,7 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       Then("a point intersection between s and s2 should be found")
       val points = intersections.filter(_._1.isSinglePoint)
       points should have size 1
-      points.head._1.pointIntersection should be (s2.stop)
+      points.head._1.pointIntersection should be (RPoint(s2.stop))
       segSet(points.head._2) should be (Set(s, s2))
 
     }
@@ -1361,9 +1361,9 @@ class BentleyOttmannIntersectionSpec extends SpecImports {
       And("three overlaps between u1-3 should be found")
       val overlaps = intersections.filter(_._1.isInterval)
       overlaps should have size 3
-      assert(overlaps.exists(o => o._1.overlap == (u2.start, u1.stop) && segSet(o._2) == Set(u1, u2)))
-      assert(overlaps.exists(o => o._1.overlap == (u3.start, u1.stop) && segSet(o._2) == Set(u1, u3)))
-      assert(overlaps.exists(o => o._1.overlap == (u3.start, u3.stop) && segSet(o._2) == Set(u2, u3)))
+      assert(overlaps.exists(o => o._1.overlap == r(u2.start, u1.stop) && segSet(o._2) == Set(u1, u2)))
+      assert(overlaps.exists(o => o._1.overlap == r(u3.start, u1.stop) && segSet(o._2) == Set(u1, u3)))
+      assert(overlaps.exists(o => o._1.overlap == r(u3.start, u3.stop) && segSet(o._2) == Set(u2, u3)))
 
     }
 

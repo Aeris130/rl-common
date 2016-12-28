@@ -1,13 +1,11 @@
 package net.cyndeline.rlcommon.math.geom
 
 import net.cyndeline.rlcommon.SpecImports
-import spire.math.Rational
 
 import scala.language.implicitConversions
 
 class SuperCoverSpec extends SpecImports {
   private val dummySize = 9999
-  private implicit def toRat(t: (Int, Int)): (Rational, Rational) = (Rational(t._1), Rational(t._2))
 
   describe("SuperCover") {
 

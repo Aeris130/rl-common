@@ -11,12 +11,12 @@ object SuperCover {
   /**
     * @param size The size n of a nxn grid.
     * @param line A line on the grid.
-    * @return Every gridd cell intersected by the line.
+    * @return Every grid cell intersected by the line.
     */
   def cover(size: Int, line: Line): Vector[Point] = {
     computeCover(size, line) match {
       case Right(v) => v
-      case _ => throw new Error(s"Failed to compute spercover of grid with size $size using line $line")
+      case _ => throw new Error(s"Failed to compute supercover of grid with size $size using line $line")
     }
   }
 

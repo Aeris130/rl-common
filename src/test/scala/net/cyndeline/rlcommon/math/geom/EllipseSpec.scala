@@ -1,11 +1,10 @@
 package net.cyndeline.rlcommon.math.geom
 
 import net.cyndeline.rlcommon.SpecImports
-import spire.math.Rational
 
 class EllipseSpec extends SpecImports {
 
-  private def makeEllipse(center: (Rational, Rational), rh: Int, rv: Int) = new Ellipse(RPoint(center), rh, rv, 0)
+  private def makeEllipse(center: (Int, Int), rh: Int, rv: Int) = new Ellipse(Point(center), rh, rv, 0)
 
   describe("Ellipse") {
 
@@ -51,7 +50,7 @@ class EllipseSpec extends SpecImports {
 
       Then("the point (1, 4) should be returned")
       intersection should have size 1
-      intersection.head should be (RPoint(1, 4))
+      intersection.head should be (DPoint(1, 4))
 
     }
 
@@ -65,7 +64,7 @@ class EllipseSpec extends SpecImports {
 
       Then("the point (1, 4) should be returned")
       intersection should have size 1
-      intersection.head should be (RPoint(1, 4))
+      intersection.head should be (DPoint(1, 4))
 
     }
 
@@ -81,7 +80,7 @@ class EllipseSpec extends SpecImports {
       intersection should have size 2
       val approxDoubleValues = intersection.map(p => (p.x.doubleValue(), p.y.doubleValue()))
       val eps = 0.1E-7
-      def fuzzy(d: Double, r: Rational) = Math.abs(r.toDouble - d) < eps
+      def fuzzy(d: Double, r: Double) = Math.abs(r - d) < eps
       assert(approxDoubleValues.exists(t => fuzzy(4.0, t._1) && fuzzy(7.0, t._2)))
       assert(approxDoubleValues.exists(t => fuzzy(4.0, t._1) && fuzzy(1.0, t._2)))
 
@@ -97,7 +96,7 @@ class EllipseSpec extends SpecImports {
 
       Then("the point (4, 7) should be returned")
       intersection should have size 1
-      intersection.head should be (RPoint(4, 7))
+      intersection.head should be (DPoint(4, 7))
 
     }
 
@@ -111,7 +110,7 @@ class EllipseSpec extends SpecImports {
 
       Then("the point (4, 1) should be returned")
       intersection should have size 1
-      intersection.head should be (RPoint(4, 1))
+      intersection.head should be (DPoint(4, 1))
 
     }
 
